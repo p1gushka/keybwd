@@ -8,7 +8,7 @@ int main()
         std::string host = "localhost";
         int port = 3306;
         std::string user = "root";
-        std::string password = "ваш_пароль";
+        std::string password = "123456";
         std::string schema = "my_database";
 
         mysqlx::Session sess(host, port, user, password, schema);
