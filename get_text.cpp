@@ -79,10 +79,21 @@ void print_all_table_text(pqxx::connection &conn)
     std::cout << std::endl;
 }
 
+std::string get_random_text(pqxx::connection &conn)
+{
+    pqxx::nontransaction tx_g(conn);
+    pqxx::result res = tx_g.exec(
+        "SELECT content FROM texts "
+        "ORDER BY RANDOM() "
+        "LIMIT 1");
+
+    return res.empty() ? "" : res[0][0].as<std::string>();
+}
+
 void delete_text_by_id(pqxx::connection &conn, int id)
 {
     pqxx::work tx_d(conn);
-    pqxx::result res = tx_d.exec_params("DELETE FROM texts WHERE id = $1", id);
+    pqxx::result res = tx_d.exec_params("DELETE FROM texts WHERE id = $1 RETURNING *", id);
     tx_d.commit();
     if (res.empty())
     {
@@ -113,15 +124,18 @@ int main()
     try
     {
         auto connect = connect_to_db();
-        std::string s = "hello_world";
+        std::string s = "Вот парадный подъезд";
         // insert_to_table_text(*connect, s);
         // insert_to_table_text(*connect, s);
         // insert_to_table_text(*connect, s);
-        // delete_text_by_id(*connect, 5);
+        // delete_text_by_id(*connect, 7);
         // delete_text_by_content(*connect, s);
         // print_all_table_text(*connect);
         // clear_table_completely(*connect);
-        print_all_table_text(*connect);
+        std::cout << get_random_text(*connect) << std::endl;
+        std::cout << get_random_text(*connect) << std::endl;
+        std::cout << get_random_text(*connect) << std::endl;
+        // print_all_table_text(*connect);
     }
     catch (const std::exception &e)
     {
