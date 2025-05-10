@@ -17,7 +17,7 @@ GRANT ALL PRIVILEGES ON DATABASE textdb TO textuser;
 #include <pqxx/pqxx>
 #include <memory>
 
-std::unique_ptr<pqxx::connection> connect_t_db()
+std::unique_ptr<pqxx::connection> connect_to_db()
 {
     auto conn = std::make_unique<pqxx::connection>(
         "host=localhost "
@@ -112,7 +112,7 @@ int main()
 {
     try
     {
-        auto connect = connect_t_db();
+        auto connect = connect_to_db();
         std::string s = "hello_world";
         // insert_to_table_text(*connect, s);
         // insert_to_table_text(*connect, s);
