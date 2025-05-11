@@ -44,3 +44,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     AUTOUIC ON
     AUTORCC ON
 )
+
+# Установка выходной директории
+set_target_properties(client PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
