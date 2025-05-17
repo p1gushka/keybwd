@@ -16,7 +16,6 @@ namespace server
                   const std::string &user,
                   const std::string &password,
                   const std::string &port = "5432");
-        void create_table();
         void insert_to_table_text(const std::string &text);
         void print_all_table_text();
         void delete_text_by_id(int id);

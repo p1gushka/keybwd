@@ -36,20 +36,6 @@ namespace server
         }
         std::cout << "Database connected successfully" << std::endl;
     }
-    void Server_db::create_table()
-    {
-        pqxx::work tx_c(*conn_);
-
-        tx_c.exec(
-            "CREATE TABLE IF NOT EXISTS texts ("
-            "id SERIAL PRIMARY KEY, "
-            "content TEXT NOT NULL, "
-            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-            ")");
-
-        tx_c.commit();
-        std::cout << "The \'....\' table has been created or already exists." << std::endl;
-    }
 
     void Server_db::insert_to_table_text(const std::string &text)
     {
