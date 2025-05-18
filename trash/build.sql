@@ -18,19 +18,21 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'textdb')\gexec
 \c textdb
 
 -- 3. Создаем таблицу texts1 (с проверкой на существование)
+-- DROP TABLE IF EXISTS texts; 
 CREATE TABLE IF NOT EXISTS texts (
     id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 4. Очищаем таблицу перед добавлением новых данных (опционально)
+-- 4. Очищаем таблицу перед добавлением новых данных
 -- TRUNCATE TABLE texts RESTART IDENTITY;
 
 -- 5. Добавляем тестовые данные
-INSERT INTO texts (content) VALUES
-('Это содержимое первого текста в нашей базе данных'),
-( 'Здесь находится содержание второго текстового документа');
+INSERT INTO texts (title, content) VALUES
+('Первый текст', 'Это содержимое первого текста в нашей базе данных'),
+('Второй текст', 'Здесь находится содержание второго текстового документа');
 
 -- 6. Проверяем, что данные добавились
 SELECT * FROM texts;
