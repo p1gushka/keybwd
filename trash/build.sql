@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS texts (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+
+
+
 -- 4. Очищаем таблицу перед добавлением новых данных
 -- TRUNCATE TABLE texts RESTART IDENTITY;
 
@@ -36,3 +39,5 @@ INSERT INTO texts (title, content) VALUES
 
 -- 6. Проверяем, что данные добавились
 SELECT * FROM texts;
+
+
