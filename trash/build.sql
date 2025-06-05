@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS texts (
 
 
 
+
 -- 4. Очищаем таблицу перед добавлением новых данных
 -- TRUNCATE TABLE texts RESTART IDENTITY;
 
@@ -40,4 +41,98 @@ INSERT INTO texts (title, content) VALUES
 -- 6. Проверяем, что данные добавились
 SELECT * FROM texts;
 
+CREATE TABLE IF NOT EXISTS players (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE
+);
 
+CREATE TABLE IF NOT EXISTS games (
+    id SERIAL PRIMARY KEY,
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    played_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    speed_wpm NUMERIC(5,2) NOT NULL,
+    raw_wpm NUMERIC(5,2) NOT NULL,
+    accuracy NUMERIC(5,2) NOT NULL,
+    correct_symbols INTEGER NOT NULL,
+    wrong_symbols INTEGER NOT NULL,
+    missed_symbols INTEGER NOT NULL,
+    extra_symbols INTEGER NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION prune_old_games() 
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM games
+    WHERE id IN (
+        SELECT id
+        FROM games
+        WHERE player_id = NEW.player_id
+        ORDER BY played_at DESC
+        OFFSET 5
+    );
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_prune_games
+AFTER INSERT ON games
+FOR EACH ROW
+EXECUTE FUNCTION prune_old_games();
+
+CREATE TABLE IF NOT EXISTS player_cumulative_stats (
+    player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    total_games BIGINT NOT NULL DEFAULT 0,
+    sum_speed_wpm NUMERIC(20,4) NOT NULL DEFAULT 0,
+    sum_raw_wpm NUMERIC(20,4) NOT NULL DEFAULT 0,
+    sum_accuracy NUMERIC(20,4) NOT NULL DEFAULT 0,
+    sum_correct_symbols BIGINT NOT NULL DEFAULT 0,
+    sum_wrong_symbols BIGINT NOT NULL DEFAULT 0,
+    sum_missed_symbols BIGINT NOT NULL DEFAULT 0,
+    sum_extra_symbols BIGINT NOT NULL DEFAULT 0
+);
+
+CREATE OR REPLACE FUNCTION update_cumulative_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO player_cumulative_stats(
+        player_id,
+        total_games,
+        sum_speed_wpm,
+        sum_raw_wpm,
+        sum_accuracy,
+        sum_correct_symbols,
+        sum_wrong_symbols,
+        sum_missed_symbols,
+        sum_extra_symbols
+    )
+    VALUES (
+        NEW.player_id,
+        1,
+        NEW.speed_wpm,
+        NEW.raw_wpm,
+        NEW.accuracy,
+        NEW.correct_symbols,
+        NEW.wrong_symbols,
+        NEW.missed_symbols,
+        NEW.extra_symbols
+    )
+    ON CONFLICT (player_id) DO
+      UPDATE SET
+        total_games = player_cumulative_stats.total_games + 1,
+        sum_speed_wpm = player_cumulative_stats.sum_speed_wpm + NEW.speed_wpm,
+        sum_raw_wpm = player_cumulative_stats.sum_raw_wpm + NEW.raw_wpm,
+        sum_accuracy = player_cumulative_stats.sum_accuracy + NEW.accuracy,
+        sum_correct_symbols = player_cumulative_stats.sum_correct_symbols + NEW.correct_symbols,
+        sum_wrong_symbols = player_cumulative_stats.sum_wrong_symbols + NEW.wrong_symbols,
+        sum_missed_symbols = player_cumulative_stats.sum_missed_symbols + NEW.missed_symbols,
+        sum_extra_symbols = player_cumulative_stats.sum_extra_symbols + NEW.extra_symbols
+    ;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_cumulative
+AFTER INSERT ON games
+FOR EACH ROW
+EXECUTE FUNCTION update_cumulative_stats();

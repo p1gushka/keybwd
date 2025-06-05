@@ -7,6 +7,17 @@
 namespace server
 {
 
+    struct AverageStats
+    {
+        double avg_speed_wpm;
+        double avg_raw_wpm;
+        double avg_accuracy;
+        double avg_correct_symbols;
+        double avg_wrong_symbols;
+        double avg_missed_symbols;
+        double avg_extra_symbols;
+    };
+
     class TextDatabase : public DatabaseBase
     {
     public:
@@ -22,6 +33,17 @@ namespace server
         void delete_by_id(int id);
         void delete_by_content(const std::string &content);
         void clear_table();
+
+        int get_or_create_player(const std::string &username);
+        void record_game(const std::string &username,
+                         double speed_wpm,
+                         double raw_wpm,
+                         double accuracy,
+                         int correct_symbols,
+                         int wrong_symbols,
+                         int missed_symbols,
+                         int extra_symbols);
+        AverageStats get_average_stats(const std::string &username) const;
     };
 
 } // namespace server

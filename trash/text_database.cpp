@@ -1,16 +1,4 @@
-/*
-sudo -u postgres psql -c "CREATE USER textuser WITH PASSWORD 'secure_password';"
-sudo -u postgres psql -c "CREATE DATABASE textdb OWNER textuser;"
-
-psql -U postgres -d textdb -c "
-GRANT CONNECT ON DATABASE textdb TO textuser;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO textuser;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO textuser;
-GRANT ALL PRIVILEGES ON DATABASE textdb TO textuser;
-"
-
-*/
-
+// text_database.cpp
 #include "text_database.hpp"
 #include <iostream>
 
@@ -36,7 +24,6 @@ namespace server
     {
         verify_connection();
         pqxx::work tx(*conn_);
-
         try
         {
             tx.exec_params(
@@ -55,7 +42,6 @@ namespace server
     {
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-
         try
         {
             auto res = tx.exec1("SELECT content FROM texts ORDER BY RANDOM() LIMIT 1");
@@ -71,7 +57,6 @@ namespace server
     {
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-
         auto res = tx.exec("SELECT id, title, content, created_at FROM texts");
         if (res.empty())
         {
@@ -91,7 +76,6 @@ namespace server
     {
         verify_connection();
         pqxx::work tx(*conn_);
-
         auto res = tx.exec_params("DELETE FROM texts WHERE id = $1 RETURNING id", id);
         tx.commit();
         std::cout << (res.empty() ? "Nothing deleted" : "Deleted text ID " + std::to_string(id)) << "\n";
@@ -101,7 +85,6 @@ namespace server
     {
         verify_connection();
         pqxx::work tx(*conn_);
-
         auto res = tx.exec_params("DELETE FROM texts WHERE content = $1 RETURNING id", content);
         tx.commit();
         std::cout << "Deleted " << res.size() << " entries\n";
@@ -113,6 +96,84 @@ namespace server
         pqxx::work tx(*conn_);
         tx.exec("TRUNCATE TABLE texts RESTART IDENTITY");
         tx.commit();
+    }
+
+    int TextDatabase::get_or_create_player(const std::string &username)
+    {
+        verify_connection();
+        pqxx::work tx(*conn_);
+        tx.exec_params(
+            "INSERT INTO players(username) VALUES ($1) ON CONFLICT (username) DO NOTHING",
+            username);
+        auto res = tx.exec_params(
+            "SELECT id FROM players WHERE username = $1",
+            username);
+        tx.commit();
+        return res[0][0].as<int>();
+    }
+
+    void TextDatabase::record_game(const std::string &username,
+                                   double speed_wpm,
+                                   double raw_wpm,
+                                   double accuracy,
+                                   int correct_symbols,
+                                   int wrong_symbols,
+                                   int missed_symbols,
+                                   int extra_symbols)
+    {
+        verify_connection();
+        pqxx::work tx(*conn_);
+        auto res_player = tx.exec_params(
+            "INSERT INTO players(username) VALUES ($1) ON CONFLICT (username) DO NOTHING",
+            username);
+        auto res_id = tx.exec_params(
+            "SELECT id FROM players WHERE username = $1",
+            username);
+        int player_id = res_id[0][0].as<int>();
+        tx.exec_params(
+            "INSERT INTO games(player_id, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            player_id, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols);
+        tx.commit();
+    }
+
+    AverageStats TextDatabase::get_average_stats(const std::string &username) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res_id = tx.exec_params(
+            "SELECT id FROM players WHERE username = $1",
+            username);
+        if (res_id.empty())
+        {
+            throw std::runtime_error("Player not found");
+        }
+        int player_id = res_id[0][0].as<int>();
+        auto res_stats = tx.exec_params(
+            "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games "
+            "FROM player_cumulative_stats WHERE player_id = $1",
+            player_id);
+        if (res_stats.empty())
+        {
+            throw std::runtime_error("No statistics for player");
+        }
+        double sum_speed = res_stats[0]["sum_speed_wpm"].as<double>();
+        double sum_raw = res_stats[0]["sum_raw_wpm"].as<double>();
+        double sum_acc = res_stats[0]["sum_accuracy"].as<double>();
+        double sum_corr = res_stats[0]["sum_correct_symbols"].as<double>();
+        double sum_wrong = res_stats[0]["sum_wrong_symbols"].as<double>();
+        double sum_missed = res_stats[0]["sum_missed_symbols"].as<double>();
+        double sum_extra = res_stats[0]["sum_extra_symbols"].as<double>();
+        double total = res_stats[0]["total_games"].as<double>();
+        AverageStats stats;
+        stats.avg_speed_wpm = sum_speed / total;
+        stats.avg_raw_wpm = sum_raw / total;
+        stats.avg_accuracy = sum_acc / total;
+        stats.avg_correct_symbols = sum_corr / total;
+        stats.avg_wrong_symbols = sum_wrong / total;
+        stats.avg_missed_symbols = sum_missed / total;
+        stats.avg_extra_symbols = sum_extra / total;
+        return stats;
     }
 
 } // namespace server
