@@ -1,0 +1,23 @@
+# Бинарные файлы
+*.exe
+*.out
+*.so
+*.a
+
+# Сборки
+client/build/
+server/build/
+/build/
+/Debug/
+/Release/
+
+# IDE-специфичные файлы
+.vscode/
+.idea/
+
+# Кэш CMake
+CMakeCache.txt
+CMakeFiles/
+
+# Конкретные файлы
+cmakestart.txt
