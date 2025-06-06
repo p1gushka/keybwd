@@ -26,10 +26,6 @@ CREATE TABLE IF NOT EXISTS texts (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-
-
-
-
 -- 4. Очищаем таблицу перед добавлением новых данных
 -- TRUNCATE TABLE texts RESTART IDENTITY;
 
@@ -41,11 +37,33 @@ INSERT INTO texts (title, content) VALUES
 -- 6. Проверяем, что данные добавились
 SELECT * FROM texts;
 
+-- 7. Создаем таблицу players (если нет)
 CREATE TABLE IF NOT EXISTS players (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE
+    username VARCHAR(50) NOT NULL
 );
 
+-- 8. Дополняем players колонками авторизации (если их нет)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='login') THEN
+        ALTER TABLE players ADD COLUMN login VARCHAR(50) NOT NULL DEFAULT 'temp_login';
+        UPDATE players SET login = username;
+        ALTER TABLE players ALTER COLUMN login DROP DEFAULT;
+        ALTER TABLE players ADD CONSTRAINT login_unique UNIQUE (login);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='password_hash') THEN
+        ALTER TABLE players ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='registered_at') THEN
+        ALTER TABLE players ADD COLUMN registered_at TIMESTAMP DEFAULT NOW();
+    END IF;
+END
+$$;
+
+-- 9. Создаем таблицу games
 CREATE TABLE IF NOT EXISTS games (
     id SERIAL PRIMARY KEY,
     player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
@@ -59,6 +77,7 @@ CREATE TABLE IF NOT EXISTS games (
     extra_symbols INTEGER NOT NULL
 );
 
+-- 10. Функция: ограничиваем таблицу games до 5 последних записей на игрока
 CREATE OR REPLACE FUNCTION prune_old_games() 
 RETURNS TRIGGER AS $$
 BEGIN
@@ -74,12 +93,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
+-- 11. Триггер на games
 CREATE TRIGGER trg_prune_games
 AFTER INSERT ON games
 FOR EACH ROW
 EXECUTE FUNCTION prune_old_games();
 
+-- 12. Таблица накопленной статистики
 CREATE TABLE IF NOT EXISTS player_cumulative_stats (
     player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
     total_games BIGINT NOT NULL DEFAULT 0,
@@ -92,6 +112,7 @@ CREATE TABLE IF NOT EXISTS player_cumulative_stats (
     sum_extra_symbols BIGINT NOT NULL DEFAULT 0
 );
 
+-- 13. Функция для обновления статистики
 CREATE OR REPLACE FUNCTION update_cumulative_stats()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -132,6 +153,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 14. Триггер на обновление статистики
 CREATE TRIGGER trg_update_cumulative
 AFTER INSERT ON games
 FOR EACH ROW

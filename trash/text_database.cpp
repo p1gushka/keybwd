@@ -1,9 +1,18 @@
 // text_database.cpp
 #include "text_database.hpp"
 #include <iostream>
+#include <functional>
 
 namespace server
 {
+    namespace
+    {
+        std::string simple_hash(const std::string &input)
+        {
+            std::hash<std::string> hasher;
+            return std::to_string(hasher(input));
+        }
+    }
 
     TextDatabase::TextDatabase(const std::string &host,
                                const std::string &dbname,
@@ -18,6 +27,40 @@ namespace server
               "port=" + port)
     {
         std::cout << "Connected to text database successfully\n";
+    }
+
+    bool TextDatabase::register_player(const std::string &login, const std::string &username, const std::string &password)
+    {
+        verify_connection();
+        std::string hash = simple_hash(password);
+        pqxx::work tx(*conn_);
+        auto res = tx.exec_params("SELECT id FROM players WHERE login = $1", login);
+        if (!res.empty())
+            return false;
+        tx.exec_params("INSERT INTO players (login, username, password_hash) VALUES ($1, $2, $3)", login, username, hash);
+        tx.commit();
+        return true;
+    }
+
+    std::optional<int> TextDatabase::authenticate_player(const std::string &login, const std::string &password)
+    {
+        verify_connection();
+        std::string hash = simple_hash(password);
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params("SELECT id FROM players WHERE login = $1 AND password_hash = $2", login, hash);
+        if (res.empty())
+            return std::nullopt;
+        return res[0]["id"].as<int>();
+    }
+
+    std::string TextDatabase::get_username(int player_id) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params("SELECT username FROM players WHERE id = $1", player_id);
+        if (res.empty())
+            throw std::runtime_error("Player not found");
+        return res[0][0].as<std::string>();
     }
 
     void TextDatabase::insert_text(const std::string &content, const std::string &title)
@@ -98,21 +141,7 @@ namespace server
         tx.commit();
     }
 
-    int TextDatabase::get_or_create_player(const std::string &username)
-    {
-        verify_connection();
-        pqxx::work tx(*conn_);
-        tx.exec_params(
-            "INSERT INTO players(username) VALUES ($1) ON CONFLICT (username) DO NOTHING",
-            username);
-        auto res = tx.exec_params(
-            "SELECT id FROM players WHERE username = $1",
-            username);
-        tx.commit();
-        return res[0][0].as<int>();
-    }
-
-    void TextDatabase::record_game(const std::string &username,
+    void TextDatabase::record_game(int player_id,
                                    double speed_wpm,
                                    double raw_wpm,
                                    double accuracy,
@@ -123,13 +152,6 @@ namespace server
     {
         verify_connection();
         pqxx::work tx(*conn_);
-        auto res_player = tx.exec_params(
-            "INSERT INTO players(username) VALUES ($1) ON CONFLICT (username) DO NOTHING",
-            username);
-        auto res_id = tx.exec_params(
-            "SELECT id FROM players WHERE username = $1",
-            username);
-        int player_id = res_id[0][0].as<int>();
         tx.exec_params(
             "INSERT INTO games(player_id, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols) "
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
@@ -137,18 +159,10 @@ namespace server
         tx.commit();
     }
 
-    AverageStats TextDatabase::get_average_stats(const std::string &username) const
+    AverageStats TextDatabase::get_average_stats(int player_id) const
     {
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-        auto res_id = tx.exec_params(
-            "SELECT id FROM players WHERE username = $1",
-            username);
-        if (res_id.empty())
-        {
-            throw std::runtime_error("Player not found");
-        }
-        int player_id = res_id[0][0].as<int>();
         auto res_stats = tx.exec_params(
             "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games "
             "FROM player_cumulative_stats WHERE player_id = $1",

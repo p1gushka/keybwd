@@ -3,10 +3,10 @@
 
 #include "database_base.hpp"
 #include <string>
+#include <optional>
 
 namespace server
 {
-
     struct AverageStats
     {
         double avg_speed_wpm;
@@ -27,6 +27,10 @@ namespace server
                      const std::string &password,
                      const std::string &port = "5432");
 
+        bool register_player(const std::string &login, const std::string &username, const std::string &password);
+        std::optional<int> authenticate_player(const std::string &login, const std::string &password);
+        std::string get_username(int player_id) const;
+
         void insert_text(const std::string &content, const std::string &title = "Без названия");
         std::string get_random_text() const;
         void print_all() const;
@@ -34,8 +38,7 @@ namespace server
         void delete_by_content(const std::string &content);
         void clear_table();
 
-        int get_or_create_player(const std::string &username);
-        void record_game(const std::string &username,
+        void record_game(int player_id,
                          double speed_wpm,
                          double raw_wpm,
                          double accuracy,
@@ -43,9 +46,9 @@ namespace server
                          int wrong_symbols,
                          int missed_symbols,
                          int extra_symbols);
-        AverageStats get_average_stats(const std::string &username) const;
-    };
 
-} // namespace server
+        AverageStats get_average_stats(int player_id) const;
+    };
+}
 
 #endif // TEXT_DATABASE_HPP
