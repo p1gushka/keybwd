@@ -1,0 +1,4 @@
+/mnt/c/Users/basko/Desktop/keybwd/pr1/build/CMakeFiles/KeyboardTrainer.dir
+/mnt/c/Users/basko/Desktop/keybwd/pr1/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/basko/Desktop/keybwd/pr1/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/basko/Desktop/keybwd/pr1/build/CMakeFiles/KeyboardTrainer_autogen.dir
