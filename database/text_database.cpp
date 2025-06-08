@@ -1,5 +1,5 @@
-// text_database.cpp
 #include "text_database.hpp"
+#include <pqxx/pqxx>
 #include <iostream>
 #include <functional>
 
@@ -7,6 +7,7 @@ namespace server
 {
     namespace
     {
+        // Простое хэширование пароля
         std::string simple_hash(const std::string &input)
         {
             std::hash<std::string> hasher;
@@ -37,7 +38,9 @@ namespace server
         auto res = tx.exec_params("SELECT id FROM players WHERE login = $1", login);
         if (!res.empty())
             return false;
-        tx.exec_params("INSERT INTO players (login, username, password_hash) VALUES ($1, $2, $3)", login, username, hash);
+        tx.exec_params(
+            "INSERT INTO players (login, username, password_hash) VALUES ($1, $2, $3)",
+            login, username, hash);
         tx.commit();
         return true;
     }
@@ -47,7 +50,9 @@ namespace server
         verify_connection();
         std::string hash = simple_hash(password);
         pqxx::nontransaction tx(*conn_);
-        auto res = tx.exec_params("SELECT id FROM players WHERE login = $1 AND password_hash = $2", login, hash);
+        auto res = tx.exec_params(
+            "SELECT id FROM players WHERE login = $1 AND password_hash = $2",
+            login, hash);
         if (res.empty())
             return std::nullopt;
         return res[0]["id"].as<int>();
@@ -69,9 +74,7 @@ namespace server
         pqxx::work tx(*conn_);
         try
         {
-            tx.exec_params(
-                "INSERT INTO texts (title, content) VALUES ($1, $2)",
-                title, content);
+            tx.exec_params("INSERT INTO texts (title, content) VALUES ($1, $2)", title, content);
             tx.commit();
         }
         catch (const std::exception &e)
@@ -100,12 +103,13 @@ namespace server
     {
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-        auto res = tx.exec("SELECT id, title, content, created_at FROM texts");
+        auto res = tx.exec("SELECT id, title, content, created_at FROM texts ORDER BY id");
         if (res.empty())
         {
-            std::cout << "Empty table";
+            std::cout << "Empty table\n";
+            return;
         }
-        for (const auto &row : res)
+        for (auto row : res)
         {
             std::cout << "ID: " << row["id"].as<int>() << "\n"
                       << "Title: " << row["title"].as<std::string>() << "\n"
@@ -121,7 +125,7 @@ namespace server
         pqxx::work tx(*conn_);
         auto res = tx.exec_params("DELETE FROM texts WHERE id = $1 RETURNING id", id);
         tx.commit();
-        std::cout << (res.empty() ? "Nothing deleted" : "Deleted text ID " + std::to_string(id)) << "\n";
+        std::cout << (res.empty() ? "Nothing deleted\n" : "Deleted text ID " + std::to_string(id) + "\n");
     }
 
     void TextDatabase::delete_by_content(const std::string &content)
@@ -142,6 +146,7 @@ namespace server
     }
 
     void TextDatabase::record_game(int player_id,
+                                   const std::string &mode,
                                    double speed_wpm,
                                    double raw_wpm,
                                    double accuracy,
@@ -153,9 +158,10 @@ namespace server
         verify_connection();
         pqxx::work tx(*conn_);
         tx.exec_params(
-            "INSERT INTO games(player_id, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-            player_id, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols);
+            "INSERT INTO games(player_id, mode, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            player_id, mode, speed_wpm, raw_wpm, accuracy,
+            correct_symbols, wrong_symbols, missed_symbols, extra_symbols);
         tx.commit();
     }
 
@@ -163,22 +169,22 @@ namespace server
     {
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-        auto res_stats = tx.exec_params(
+        auto res = tx.exec_params(
             "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games "
             "FROM player_cumulative_stats WHERE player_id = $1",
             player_id);
-        if (res_stats.empty())
-        {
+        if (res.empty())
             throw std::runtime_error("No statistics for player");
-        }
-        double sum_speed = res_stats[0]["sum_speed_wpm"].as<double>();
-        double sum_raw = res_stats[0]["sum_raw_wpm"].as<double>();
-        double sum_acc = res_stats[0]["sum_accuracy"].as<double>();
-        double sum_corr = res_stats[0]["sum_correct_symbols"].as<double>();
-        double sum_wrong = res_stats[0]["sum_wrong_symbols"].as<double>();
-        double sum_missed = res_stats[0]["sum_missed_symbols"].as<double>();
-        double sum_extra = res_stats[0]["sum_extra_symbols"].as<double>();
-        double total = res_stats[0]["total_games"].as<double>();
+
+        double sum_speed = res[0]["sum_speed_wpm"].as<double>();
+        double sum_raw = res[0]["sum_raw_wpm"].as<double>();
+        double sum_acc = res[0]["sum_accuracy"].as<double>();
+        double sum_corr = res[0]["sum_correct_symbols"].as<double>();
+        double sum_wrong = res[0]["sum_wrong_symbols"].as<double>();
+        double sum_missed = res[0]["sum_missed_symbols"].as<double>();
+        double sum_extra = res[0]["sum_extra_symbols"].as<double>();
+        double total = res[0]["total_games"].as<double>();
+
         AverageStats stats;
         stats.avg_speed_wpm = sum_speed / total;
         stats.avg_raw_wpm = sum_raw / total;
@@ -188,6 +194,38 @@ namespace server
         stats.avg_missed_symbols = sum_missed / total;
         stats.avg_extra_symbols = sum_extra / total;
         return stats;
+    }
+
+    std::vector<LeaderboardEntry> TextDatabase::get_leaderboard(const std::string &mode, int limit) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params(
+            "SELECT username, speed_wpm, accuracy, played_at "
+            "FROM leaderboard_" +
+                mode + " "
+                       "ORDER BY speed_wpm DESC "
+                       "LIMIT $1",
+            limit);
+
+        std::vector<LeaderboardEntry> board;
+        for (auto row : res)
+        {
+            board.push_back({row["username"].as<std::string>(),
+                             row["speed_wpm"].as<double>(),
+                             row["accuracy"].as<double>(),
+                             row["played_at"].as<std::string>()});
+        }
+        return board;
+    }
+
+    void TextDatabase::refresh_leaderboards()
+    {
+        verify_connection();
+        pqxx::work tx(*conn_);
+        tx.exec("REFRESH MATERIALIZED VIEW leaderboard_60");
+        tx.exec("REFRESH MATERIALIZED VIEW leaderboard_15");
+        tx.commit();
     }
 
 } // namespace server
