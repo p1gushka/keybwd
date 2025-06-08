@@ -1,2 +1,0 @@
-# Hashes of file build rules.
-669cb9d6e920759d2eb8b5a337cf014b client/CMakeFiles/KeyboardTrainer_autogen
