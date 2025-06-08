@@ -3,10 +3,12 @@
 #include "screens/TypingScreen.h"
 #include "screens/ResultsScreen.h"
 #include "model/SessionStats.h"
-
+#include "../../database/text_database.hpp"
+#include <pqxx/pqxx>
 using namespace view;
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), db("localhost", "textdb", "textuser", "secure_password", "5432")
+{
     resize(800, 600);
     setWindowTitle("Клавиатурный Тренажёр");
 
@@ -29,24 +31,39 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     stack->setCurrentWidget(modeSelection);
 }
 
-void MainWindow::onModeSelected(const QString &mode) {
-    QString text = (mode == "time") ? "Текст для режима на время."
-                  : (mode == "words") ? "Текст по количеству слов."
-                  : "Пользовательский текст.";
+void MainWindow::onModeSelected(const QString &mode)
+{
+    QString text;
+    if (mode == "time")
+    {
+        text = QString::fromStdString(db.get_random_text());
+    }
+    else if (mode == "words")
+    {
+        text = "Текст по количеству слов.";
+    }
+    else
+    {
+        text = "Пользовательский текст.";
+    }
+
     typingScreen->setText(text);
     stack->setCurrentWidget(typingScreen);
 }
 
-void MainWindow::onTypingFinished() {
+void MainWindow::onTypingFinished()
+{
     SessionStats stats = typingScreen->getSessionStats();
     resultsScreen->setStats(stats);
     stack->setCurrentWidget(resultsScreen);
 }
 
-void MainWindow::onRepeat() {
+void MainWindow::onRepeat()
+{
     stack->setCurrentWidget(typingScreen);
 }
 
-void MainWindow::onRestart() {
+void MainWindow::onRestart()
+{
     stack->setCurrentWidget(modeSelection);
 }
