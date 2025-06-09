@@ -1,24 +1,29 @@
--- Давайте вы скачали как-то SQL и пытаетесь запустить этот скрипт.
--- Такая команда для запуска: psql -U <имя юзера> -d postgres -f build.sql
--- 1. Ошибка: Peer authentication failed for user
--- * sudo nano /etc/postgresql/<версия>/main/pg_hba.conf
--- * Найдите строку: local   all   all   peer
--- и замените peer на scram-sha-256
--- * Перезапустите PostgreSQL: sudo systemctl restart postgresql
--- * psql -U <имя юзера> -d postgres -f build.sql
--- Ну юзер это чел, которого поможет создать гпт + пароль.
+-- =========================
+-- Шаг 0: Создание пользователя и базы
+-- =========================
 
--- Создает базу данных, таблицу texts и добавляет тестовые данные.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'textuser') THEN
+        CREATE USER textuser WITH PASSWORD 'secure_password';
+    END IF;
+END
+$$;
 
--- 1. Проверяем существование базы данных и создаем ее.
-SELECT 'CREATE DATABASE textdb'
+SELECT 'CREATE DATABASE textdb WITH OWNER textuser'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'textdb')\gexec
 
--- 2. Подключаемся к созданной базе
 \c textdb
 
--- 3. Создаем таблицу texts1 (с проверкой на существование)
--- DROP TABLE IF EXISTS texts; 
+-- =========================
+-- Шаг 1: Передаём владельца схемы и базы
+-- =========================
+ALTER SCHEMA public OWNER TO textuser;
+GRANT ALL PRIVILEGES ON DATABASE textdb TO textuser;
+
+-- =========================
+-- Шаг 2: Таблица texts
+-- =========================
 CREATE TABLE IF NOT EXISTS texts (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -26,48 +31,29 @@ CREATE TABLE IF NOT EXISTS texts (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 4. Очищаем таблицу перед добавлением новых данных
-TRUNCATE TABLE texts RESTART IDENTITY;
-
--- 5. Добавляем тестовые данные
 INSERT INTO texts (title, content) VALUES
-('Первый текст', 'Это содержимое первого текста в нашей базе данных'),
-('Второй текст', 'Здесь находится содержание второго текстового документа');
+('Первый текст', 'Это содержимое первого текста'),
+('Второй текст', 'Это другой текстовый фрагмент');
 
--- 6. Проверяем, что данные добавились
-SELECT * FROM texts;
-
--- 7. Создаем таблицу players (если нет)
+-- =========================
+-- Шаг 3: Таблица players с авторизацией
+-- =========================
 CREATE TABLE IF NOT EXISTS players (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(50) NOT NULL
+    username VARCHAR(50) NOT NULL,
+    login VARCHAR(50) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL DEFAULT '',
+    registered_at TIMESTAMP DEFAULT NOW()
 );
 
--- 8. Дополняем players колонками авторизации (если их нет)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='login') THEN
-        ALTER TABLE players ADD COLUMN login VARCHAR(50) NOT NULL DEFAULT 'temp_login';
-        UPDATE players SET login = username;
-        ALTER TABLE players ALTER COLUMN login DROP DEFAULT;
-        ALTER TABLE players ADD CONSTRAINT login_unique UNIQUE (login);
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='password_hash') THEN
-        ALTER TABLE players ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='registered_at') THEN
-        ALTER TABLE players ADD COLUMN registered_at TIMESTAMP DEFAULT NOW();
-    END IF;
-END
-$$;
-
--- 9. Создаем таблицу games
+-- =========================
+-- Шаг 4: Таблица games
+-- =========================
 CREATE TABLE IF NOT EXISTS games (
     id SERIAL PRIMARY KEY,
     player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
     played_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    mode VARCHAR(10) NOT NULL DEFAULT '60',
     speed_wpm NUMERIC(5,2) NOT NULL,
     raw_wpm NUMERIC(5,2) NOT NULL,
     accuracy NUMERIC(5,2) NOT NULL,
@@ -77,14 +63,17 @@ CREATE TABLE IF NOT EXISTS games (
     extra_symbols INTEGER NOT NULL
 );
 
--- 10. Функция: ограничиваем таблицу games до 5 последних записей на игрока
-CREATE OR REPLACE FUNCTION prune_old_games() 
+-- =========================
+-- Шаг 5: Триггер prune_old_games
+-- =========================
+DROP TRIGGER IF EXISTS trg_prune_games ON games;
+
+CREATE OR REPLACE FUNCTION prune_old_games()
 RETURNS TRIGGER AS $$
 BEGIN
     DELETE FROM games
     WHERE id IN (
-        SELECT id
-        FROM games
+        SELECT id FROM games
         WHERE player_id = NEW.player_id
         ORDER BY played_at DESC
         OFFSET 5
@@ -93,13 +82,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 11. Триггер на games
 CREATE TRIGGER trg_prune_games
 AFTER INSERT ON games
 FOR EACH ROW
 EXECUTE FUNCTION prune_old_games();
 
--- 12. Таблица накопленной статистики
+-- =========================
+-- Шаг 6: Таблица player_cumulative_stats
+-- =========================
 CREATE TABLE IF NOT EXISTS player_cumulative_stats (
     player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
     total_games BIGINT NOT NULL DEFAULT 0,
@@ -112,7 +102,11 @@ CREATE TABLE IF NOT EXISTS player_cumulative_stats (
     sum_extra_symbols BIGINT NOT NULL DEFAULT 0
 );
 
--- 13. Функция для обновления статистики
+-- =========================
+-- Шаг 7: Триггер обновления статистики
+-- =========================
+DROP TRIGGER IF EXISTS trg_update_cumulative ON games;
+
 CREATE OR REPLACE FUNCTION update_cumulative_stats()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -128,18 +122,11 @@ BEGIN
         sum_extra_symbols
     )
     VALUES (
-        NEW.player_id,
-        1,
-        NEW.speed_wpm,
-        NEW.raw_wpm,
-        NEW.accuracy,
-        NEW.correct_symbols,
-        NEW.wrong_symbols,
-        NEW.missed_symbols,
-        NEW.extra_symbols
+        NEW.player_id, 1, NEW.speed_wpm, NEW.raw_wpm, NEW.accuracy,
+        NEW.correct_symbols, NEW.wrong_symbols, NEW.missed_symbols, NEW.extra_symbols
     )
-    ON CONFLICT (player_id) DO
-      UPDATE SET
+    ON CONFLICT (player_id) DO UPDATE
+    SET
         total_games = player_cumulative_stats.total_games + 1,
         sum_speed_wpm = player_cumulative_stats.sum_speed_wpm + NEW.speed_wpm,
         sum_raw_wpm = player_cumulative_stats.sum_raw_wpm + NEW.raw_wpm,
@@ -147,14 +134,55 @@ BEGIN
         sum_correct_symbols = player_cumulative_stats.sum_correct_symbols + NEW.correct_symbols,
         sum_wrong_symbols = player_cumulative_stats.sum_wrong_symbols + NEW.wrong_symbols,
         sum_missed_symbols = player_cumulative_stats.sum_missed_symbols + NEW.missed_symbols,
-        sum_extra_symbols = player_cumulative_stats.sum_extra_symbols + NEW.extra_symbols
-    ;
+        sum_extra_symbols = player_cumulative_stats.sum_extra_symbols + NEW.extra_symbols;
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
--- 14. Триггер на обновление статистики
 CREATE TRIGGER trg_update_cumulative
 AFTER INSERT ON games
 FOR EACH ROW
 EXECUTE FUNCTION update_cumulative_stats();
+
+-- =========================
+-- Шаг 8: Таблицы лидерборда (с username и accuracy)
+-- =========================
+CREATE MATERIALIZED VIEW leaderboard_60 AS
+SELECT p.username, g.speed_wpm, g.accuracy, g.played_at
+FROM games g
+JOIN players p ON g.player_id = p.id
+WHERE g.mode = '60'
+ORDER BY g.speed_wpm DESC
+LIMIT 10;
+
+CREATE MATERIALIZED VIEW leaderboard_15 AS
+SELECT p.username, g.speed_wpm, g.accuracy, g.played_at
+FROM games g
+JOIN players p ON g.player_id = p.id
+WHERE g.mode = '15'
+ORDER BY g.speed_wpm DESC
+LIMIT 10;
+
+-- =========================
+-- Шаг 9: Функция обновления лидербордов
+-- =========================
+CREATE OR REPLACE FUNCTION refresh_leaderboards()
+RETURNS VOID AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW leaderboard_60;
+    REFRESH MATERIALIZED VIEW leaderboard_15;
+END;
+$$ LANGUAGE plpgsql;
+-- =========================
+-- Шаг 10: Передаём владельца объектов пользователю textuser
+-- =========================
+ALTER TABLE texts OWNER TO textuser;
+ALTER TABLE players OWNER TO textuser;
+ALTER TABLE games OWNER TO textuser;
+ALTER TABLE player_cumulative_stats OWNER TO textuser;
+ALTER TABLE leaderboard_60 OWNER TO textuser;
+ALTER TABLE leaderboard_15 OWNER TO textuser;
+
+ALTER FUNCTION prune_old_games() OWNER TO textuser;
+ALTER FUNCTION update_cumulative_stats() OWNER TO textuser;
+ALTER FUNCTION refresh_leaderboards() OWNER TO textuser;
