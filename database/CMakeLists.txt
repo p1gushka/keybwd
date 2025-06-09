@@ -1,57 +1,91 @@
-cmake_minimum_required(VERSION 3.16)
+# cmake_minimum_required(VERSION 3.16)
 
-project(KeyboardTrainer VERSION 1.0 LANGUAGES CXX)
+# project(KeyboardTrainer VERSION 1.0 LANGUAGES CXX)
+
+# set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# # Политики для автоматической обработки MOC/UIC/RCC
+# cmake_policy(SET CMP0071 NEW)
+
+# find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+
+# # РУЧНАЯ НАСТРОЙКА ДЛЯ WSL: пути к libpqxx и libpq
+# set(LIBPQXX_INCLUDE_DIRS "/usr/include")
+# set(LIBPQXX_LIBRARIES "/usr/lib/x86_64-linux-gnu/libpqxx.so" "/usr/lib/x86_64-linux-gnu/libpq.so")
+
+# # Подключаем директории с заголовками
+# include_directories(
+#     ${CMAKE_SOURCE_DIR}
+#     ${LIBPQXX_INCLUDE_DIRS}
+# )
+
+# # Собираем все .cpp файлы, включая наши текстовые БД
+# file(GLOB_RECURSE SOURCES
+#     "${CMAKE_SOURCE_DIR}/main.cpp"
+#     "${CMAKE_SOURCE_DIR}/text_database.cpp"
+#     "${CMAKE_SOURCE_DIR}/model/*.cpp"
+#     "${CMAKE_SOURCE_DIR}/view/*.cpp"
+#     "${CMAKE_SOURCE_DIR}/view/components/*.cpp"
+#     "${CMAKE_SOURCE_DIR}/view/screens/*.cpp"
+# )
+
+# # Заголовки (*.hpp / *.h) для IDE, но они не участвуют в линковке напрямую
+# file(GLOB_RECURSE HEADERS
+#     "${CMAKE_SOURCE_DIR}/*.hpp"
+#     "${CMAKE_SOURCE_DIR}/*.h"
+#     "${CMAKE_SOURCE_DIR}/model/*.hpp"
+#     "${CMAKE_SOURCE_DIR}/view/*.hpp"
+#     "${CMAKE_SOURCE_DIR}/view/components/*.hpp"
+#     "${CMAKE_SOURCE_DIR}/view/screens/*.hpp"
+# )
+
+# add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+# target_link_libraries(${PROJECT_NAME}
+#     PRIVATE
+#     Qt6::Core
+#     Qt6::Gui
+#     Qt6::Widgets
+#     ${LIBPQXX_LIBRARIES}
+# )
+
+# set_target_properties(${PROJECT_NAME} PROPERTIES
+#     AUTOMOC ON
+#     AUTOUIC ON
+#     AUTORCC ON
+# )
+#==============================================================================================================================
+
+cmake_minimum_required(VERSION 3.16)
+project(KeyboardTrainerDatabase VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Политики для автоматической обработки MOC/UIC/RCC
-cmake_policy(SET CMP0071 NEW)
+# Находим libpqxx через pkg-config
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PQXX REQUIRED libpqxx)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-
-# РУЧНАЯ НАСТРОЙКА ДЛЯ WSL: пути к libpqxx и libpq
-set(LIBPQXX_INCLUDE_DIRS "/usr/include")
-set(LIBPQXX_LIBRARIES "/usr/lib/x86_64-linux-gnu/libpqxx.so" "/usr/lib/x86_64-linux-gnu/libpq.so")
-
-# Подключаем директории с заголовками
+# Пути к вашим заголовкам
 include_directories(
-    ${CMAKE_SOURCE_DIR}
-    ${LIBPQXX_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}      # database_base.hpp, text_database.hpp
+    ${PQXX_INCLUDE_DIRS}             # заголовки libpqxx
 )
 
-# Собираем все .cpp файлы, включая наши текстовые БД
-file(GLOB_RECURSE SOURCES
-    "${CMAKE_SOURCE_DIR}/main.cpp"
-    "${CMAKE_SOURCE_DIR}/text_database.cpp"
-    "${CMAKE_SOURCE_DIR}/model/*.cpp"
-    "${CMAKE_SOURCE_DIR}/view/*.cpp"
-    "${CMAKE_SOURCE_DIR}/view/components/*.cpp"
-    "${CMAKE_SOURCE_DIR}/view/screens/*.cpp"
+# Собираем исполняемый файл для тестирования БД
+add_executable(db_test
+    main.cpp                        # тестовый main
+    get_text.cpp                    # если хотите тестировать get_random_text и др.
+    text_database.cpp               # реализация TextDatabase
 )
 
-# Заголовки (*.hpp / *.h) для IDE, но они не участвуют в линковке напрямую
-file(GLOB_RECURSE HEADERS
-    "${CMAKE_SOURCE_DIR}/*.hpp"
-    "${CMAKE_SOURCE_DIR}/*.h"
-    "${CMAKE_SOURCE_DIR}/model/*.hpp"
-    "${CMAKE_SOURCE_DIR}/view/*.hpp"
-    "${CMAKE_SOURCE_DIR}/view/components/*.hpp"
-    "${CMAKE_SOURCE_DIR}/view/screens/*.hpp"
-)
-
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-
-target_link_libraries(${PROJECT_NAME}
+# Линкуем с libpqxx и libpq
+target_link_libraries(db_test
     PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-    ${LIBPQXX_LIBRARIES}
+        ${PQXX_LIBRARIES}
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    AUTOMOC ON
-    AUTOUIC ON
-    AUTORCC ON
-)
+# Передаём флаги компиляции/линковки из pkg-config
+target_compile_definitions(db_test PRIVATE ${PQXX_CFLAGS_OTHER})
+target_compile_options(db_test PRIVATE ${PQXX_CFLAGS_OTHER})

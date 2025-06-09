@@ -12,7 +12,8 @@ GRANT ALL PRIVILEGES ON DATABASE textdb TO textuser;
 */
 
 // Реализация класса-обёрки будет позже
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <iostream>
 #include <pqxx/pqxx>
 #include <memory>
@@ -143,3 +144,4 @@ int main()
         return 1;
     }
 }
+#pragma GCC diagnostic pop
