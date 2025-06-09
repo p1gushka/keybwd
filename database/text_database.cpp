@@ -196,19 +196,23 @@ namespace server
         return stats;
     }
 
-    std::vector<LeaderboardEntry> TextDatabase::get_leaderboard(const std::string &mode, int limit) const
+    std::vector<server::LeaderboardEntry> TextDatabase::get_leaderboard(const std::string &mode, int limit) const
     {
+        if (mode != "60" && mode != "15")
+        {
+            throw std::invalid_argument("Invalid mode for leaderboard: " + mode);
+        }
+
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-        auto res = tx.exec_params(
+        std::string view = "leaderboard_" + mode;
+        auto query =
             "SELECT username, speed_wpm, accuracy, played_at "
-            "FROM leaderboard_" +
-                mode + " "
-                       "ORDER BY speed_wpm DESC "
-                       "LIMIT $1",
-            limit);
+            "FROM " +
+            view + " ORDER BY speed_wpm DESC LIMIT $1";
 
-        std::vector<LeaderboardEntry> board;
+        auto res = tx.exec_params(query, limit);
+        std::vector<server::LeaderboardEntry> board;
         for (auto row : res)
         {
             board.push_back({row["username"].as<std::string>(),
@@ -218,7 +222,6 @@ namespace server
         }
         return board;
     }
-
     void TextDatabase::refresh_leaderboards()
     {
         verify_connection();

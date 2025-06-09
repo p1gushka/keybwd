@@ -64,7 +64,15 @@ CREATE TABLE IF NOT EXISTS games (
 );
 
 -- =========================
--- Шаг 5: Триггер prune_old_games
+-- Шаг 5: Присваиваем владельца sequence
+-- =========================
+ALTER SEQUENCE texts_id_seq OWNER TO textuser;
+ALTER SEQUENCE players_id_seq OWNER TO textuser;
+ALTER SEQUENCE games_id_seq OWNER TO textuser;
+-- (Добавьте другие sequence, если они созданы автоматически)
+
+-- =========================
+-- Шаг 6: Триггер prune_old_games
 -- =========================
 DROP TRIGGER IF EXISTS trg_prune_games ON games;
 
@@ -88,7 +96,7 @@ FOR EACH ROW
 EXECUTE FUNCTION prune_old_games();
 
 -- =========================
--- Шаг 6: Таблица player_cumulative_stats
+-- Шаг 7: Таблица player_cumulative_stats
 -- =========================
 CREATE TABLE IF NOT EXISTS player_cumulative_stats (
     player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
@@ -103,7 +111,7 @@ CREATE TABLE IF NOT EXISTS player_cumulative_stats (
 );
 
 -- =========================
--- Шаг 7: Триггер обновления статистики
+-- Шаг 8: Триггер обновления статистики
 -- =========================
 DROP TRIGGER IF EXISTS trg_update_cumulative ON games;
 
@@ -145,26 +153,42 @@ FOR EACH ROW
 EXECUTE FUNCTION update_cumulative_stats();
 
 -- =========================
--- Шаг 8: Таблицы лидерборда (с username и accuracy)
+-- Шаг 9: Материализованные представления лидеров (уникальные пользователи)
 -- =========================
 CREATE MATERIALIZED VIEW leaderboard_60 AS
-SELECT p.username, g.speed_wpm, g.accuracy, g.played_at
-FROM games g
-JOIN players p ON g.player_id = p.id
-WHERE g.mode = '60'
-ORDER BY g.speed_wpm DESC
+SELECT username, speed_wpm, accuracy, played_at
+FROM (
+    SELECT DISTINCT ON (g.player_id)
+        p.username,
+        g.speed_wpm,
+        g.accuracy,
+        g.played_at
+    FROM games g
+    JOIN players p ON g.player_id = p.id
+    WHERE g.mode = '60'
+    ORDER BY g.player_id, g.speed_wpm DESC, g.accuracy DESC, g.played_at DESC
+) sub
+ORDER BY speed_wpm DESC
 LIMIT 10;
 
 CREATE MATERIALIZED VIEW leaderboard_15 AS
-SELECT p.username, g.speed_wpm, g.accuracy, g.played_at
-FROM games g
-JOIN players p ON g.player_id = p.id
-WHERE g.mode = '15'
-ORDER BY g.speed_wpm DESC
+SELECT username, speed_wpm, accuracy, played_at
+FROM (
+    SELECT DISTINCT ON (g.player_id)
+        p.username,
+        g.speed_wpm,
+        g.accuracy,
+        g.played_at
+    FROM games g
+    JOIN players p ON g.player_id = p.id
+    WHERE g.mode = '15'
+    ORDER BY g.player_id, g.speed_wpm DESC, g.accuracy DESC, g.played_at DESC
+) sub
+ORDER BY speed_wpm DESC
 LIMIT 10;
 
 -- =========================
--- Шаг 9: Функция обновления лидербордов
+-- Шаг 10: Функция обновления лидербордов
 -- =========================
 CREATE OR REPLACE FUNCTION refresh_leaderboards()
 RETURNS VOID AS $$
@@ -173,15 +197,17 @@ BEGIN
     REFRESH MATERIALIZED VIEW leaderboard_15;
 END;
 $$ LANGUAGE plpgsql;
+
 -- =========================
--- Шаг 10: Передаём владельца объектов пользователю textuser
+-- Шаг 11: Передаём владельца объектов
 -- =========================
 ALTER TABLE texts OWNER TO textuser;
 ALTER TABLE players OWNER TO textuser;
 ALTER TABLE games OWNER TO textuser;
 ALTER TABLE player_cumulative_stats OWNER TO textuser;
-ALTER TABLE leaderboard_60 OWNER TO textuser;
-ALTER TABLE leaderboard_15 OWNER TO textuser;
+
+ALTER MATERIALIZED VIEW leaderboard_60 OWNER TO textuser;
+ALTER MATERIALIZED VIEW leaderboard_15 OWNER TO textuser;
 
 ALTER FUNCTION prune_old_games() OWNER TO textuser;
 ALTER FUNCTION update_cumulative_stats() OWNER TO textuser;
