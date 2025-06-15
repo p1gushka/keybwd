@@ -5,11 +5,13 @@
 #include "model/SessionStats.h"
 #include "../../database/text_database.hpp"
 #include <pqxx/pqxx>
+
 using namespace view;
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), db("localhost", "textdb", "textuser", "secure_password", "5432")
 {
-    resize(800, 600);
+    resize(1000, 700);
+
     setWindowTitle("Клавиатурный Тренажёр");
 
     stack = new QStackedWidget(this);
@@ -37,14 +39,20 @@ void MainWindow::onModeSelected(const QString &mode)
     if (mode == "time")
     {
         text = QString::fromStdString(db.get_random_text());
+        typingScreen->setTimeLimit(modeSelection->getTimeLimit());
     }
     else if (mode == "words")
     {
-        text = "Текст по количеству слов.";
+        text = QString::fromStdString(db.get_random_text());
+        typingScreen->setWordCount(modeSelection->getWordCount());
+    }
+    else if (mode == "custom")
+    {
+        text = modeSelection->getCustomText();
     }
     else
     {
-        text = "Пользовательский текст.";
+        text = "Текст для других режимов";
     }
 
     typingScreen->setText(text);
@@ -60,10 +68,12 @@ void MainWindow::onTypingFinished()
 
 void MainWindow::onRepeat()
 {
+    typingScreen->reset();
     stack->setCurrentWidget(typingScreen);
 }
 
 void MainWindow::onRestart()
 {
+    typingScreen->reset();
     stack->setCurrentWidget(modeSelection);
 }
