@@ -37,7 +37,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), db("localhost", "
 }
 
 void MainWindow::onModeSelected(const QString &mode, const ModeParams &params) {
-    // НУЖНЫ ПАРАМЕТРЫ
     currentParams = params;
     std::string text;
     if (mode == "time")
@@ -49,8 +48,8 @@ void MainWindow::onModeSelected(const QString &mode, const ModeParams &params) {
     {   
         std::vector<std::string> vec_words = db.get_random_words(params.wordCount);
         
-        std::cout << vec_words.size() << std::endl;
-        std::cout << params.wordCount << std::endl;
+        // std::cout << vec_words.size() << std::endl;
+        // std::cout << params.wordCount << std::endl;
 
         for (std::string word : vec_words) {
             text += word + ' ';
@@ -75,7 +74,19 @@ void MainWindow::onModeSelected(const QString &mode, const ModeParams &params) {
         text = db.get_random_quote(length_cat);
     }
     else if (mode == "code") {
-        text = db.get_random_code((params.language).toStdString());
+        std::string lang;
+        if (params.language == "C++") {
+            lang = "cpp";
+        } else if (params.language == "Python") {
+            lang = "python";
+        } else if (params.language == "JavaScript") {
+            lang = "javascript";
+        } else if (params.language == "Java") {
+            lang = "java";
+        } else {
+            assert(false);
+        }
+        text = db.get_random_code(lang);
     }
     else
     {
@@ -95,6 +106,15 @@ void MainWindow::onTypingFinished()
 
 void MainWindow::onRepeat()
 {
+    if (currentParams.mode == "time") {
+        typingScreen->setTimeLimit(currentParams.timeLimit);
+    } else if (currentParams.mode == "words") {
+        typingScreen->setWordCount(currentParams.wordCount);
+    } else {
+        typingScreen->setTimeLimit(0);
+        typingScreen->setWordCount(0);
+    }
+    
     typingScreen->reset();
     stack->setCurrentWidget(typingScreen);
 }

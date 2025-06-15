@@ -6,5 +6,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Общие настройки для всего проекта
 add_subdirectory(client)
-add_subdirectory(server)
-add_subdirectory(database)
+# add_subdirectory(server)
+# add_subdirectory(database)

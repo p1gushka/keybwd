@@ -42,15 +42,25 @@ TypingScreen::TypingScreen(QWidget *parent) : QWidget(parent) {
 
 void TypingScreen::setTimeLimit(int seconds) {
     timeLimit = seconds;
-    timerLabel->setText(QString("%1:%2")
-                        .arg(timeLimit / 60, 2, 10, QLatin1Char('0'))
-                        .arg(timeLimit % 60, 2, 10, QLatin1Char('0')));
+    if (seconds > 0) {
+        timerLabel->setText(QString("%1:%2")
+                            .arg(timeLimit / 60, 2, 10, QLatin1Char('0'))
+                            .arg(timeLimit % 60, 2, 10, QLatin1Char('0')));
+        timerLabel->show();
+    } else {
+        timerLabel->hide();
+    }
 }
 
 void TypingScreen::setWordCount(int count) {
     wordCount = count;
     initialWordCount = count;
-    counterLabel->setText(QString("Осталось слов: %1").arg(wordCount));
+    if (count > 0) {
+        counterLabel->setText(QString("Осталось слов: %1").arg(wordCount));
+        counterLabel->show();
+    } else {
+        counterLabel->hide();
+    }
 }
 
 void TypingScreen::setTargetText(const QString &text) {
@@ -120,9 +130,12 @@ void TypingScreen::onTextChanged() {
     updateStats(input);
     applyHighlighting(input);
     
-    // Обновляем счетчик слов для соответствующего режима
     if (initialWordCount > 0) {
         updateWordCounter(input);
+    }
+
+    if (input == targetText) {
+        QTimer::singleShot(500, this, &TypingScreen::onFinishClicked);
     }
 }
 
@@ -198,9 +211,9 @@ void TypingScreen::setText(const QString &text) {
     textDisplay->setPlainText(text);
     inputField->clear();
 
-    stats = SessionStats();  // Используем stats вместо currentStats
-    timerTyping.start();     // Используем timerTyping вместо typingTimer
-    timerRaw.start();        // Используем timerRaw вместо rawTimer
+     stats = SessionStats();
+    timerTyping.start();
+    timerRaw.start();
     rawActive = true;
 
     connect(inputField, &QTextEdit::textChanged, this, &TypingScreen::onTextChanged);
@@ -221,15 +234,19 @@ SessionStats TypingScreen::getSessionStats() const {
 }
 
 void TypingScreen::reset() {
-    // Сбрасываем все состояние
     inputField->clear();
     textDisplay->clear();
-    timerLabel->setText("");
-    counterLabel->setText("");
+    
+    timeLimit = 0;
+    wordCount = 0;
+    initialWordCount = 0;
+    
     countdownTimer->stop();
     isFirstKeyPress = true;
+    rawActive = true;
     
-    // Переустанавливаем текст, если он был
+    stats = SessionStats();
+    
     if (!targetText.isEmpty()) {
         setText(targetText);
     }

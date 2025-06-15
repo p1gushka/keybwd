@@ -52,10 +52,13 @@ CREATE INDEX IF NOT EXISTS idx_texts_mode ON texts(mode_id);
 -- ------------------------------------------------------------
 -- 4) Таблица words (для режима words)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS words (
+DROP TABLE IF EXISTS words CASCADE;
+
+CREATE TABLE words (
     id   SERIAL PRIMARY KEY,
-    word VARCHAR(100) UNIQUE NOT NULL
+    word VARCHAR(100) NOT NULL
 );
+
 
 
 -- ------------------------------------------------------------
@@ -242,87 +245,300 @@ $$ LANGUAGE plpgsql;
 -- ------------------------------------------------------------
 -- 13) Вставка текстов
 -- ------------------------------------------------------------
--- Для режима 'time' (На время) - 2 текста
-INSERT INTO texts (mode_id, title, content)
-SELECT id, 'Тестовый текст 1 для режима На время', 'Это первый тестовый текст для режима На время.'
-FROM modes WHERE key = 'time'
-AND NOT EXISTS (
-    SELECT 1 FROM texts WHERE mode_id = modes.id AND title = 'Тестовый текст 1 для режима На время'
-)
-LIMIT 1;
 
+-- Для режима 'time' (На время)
 INSERT INTO texts (mode_id, title, content)
-SELECT id, 'Тестовый текст 2 для режима На время', 'Второй текст для тренировки на время.'
-FROM modes WHERE key = 'time'
-AND NOT EXISTS (
-    SELECT 1 FROM texts WHERE mode_id = modes.id AND title = 'Тестовый текст 2 для режима На время'
-)
-LIMIT 1;
-
--- Для режима 'words' (По словам) - 2 текста
-INSERT INTO texts (mode_id, title, content)
-SELECT id, 'Тестовый текст 1 для режима По словам', 'алфа бета гамма дельта эпсилон'
-FROM modes WHERE key = 'words'
-AND NOT EXISTS (
-    SELECT 1 FROM texts WHERE mode_id = modes.id AND title = 'Тестовый текст 1 для режима По словам'
-)
-LIMIT 1;
-
-INSERT INTO texts (mode_id, title, content)
-SELECT id, 'Тестовый текст 2 для режима По словам', 'зета эта тета йота каппа'
-FROM modes WHERE key = 'words'
-AND NOT EXISTS (
-    SELECT 1 FROM texts WHERE mode_id = modes.id AND title = 'Тестовый текст 2 для режима По словам'
-)
-LIMIT 1;
-
--- Для режима 'quotes' (Цитаты) - 2 цитаты
-INSERT INTO quotes (content, length_cat, author)
-SELECT 'Жизнь — это то, что с тобой происходит, пока ты строишь планы.', 'medium', 'Джон Леннон'
+SELECT id, title, content FROM (
+  SELECT id, 'Тестовый текст 1 для режима На время' AS title, 'Это первый тестовый текст для режима На время.' AS content FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 2 для режима На время', 'Второй текст для тренировки на время.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 3 для режима На время', 'Третий текст для повышения скорости набора.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 4 для режима На время', 'Четвёртый тренировочный текст для режима на время.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 5 для режима На время', 'Пятый текст для улучшения навыков набора.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 6 для режима На время', 'Шестой тестовый текст для развития скорости.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 7 для режима На время', 'Седьмой текст для режима тренировки на время.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 8 для режима На время', 'Восьмой текст для улучшения техники набора.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 9 для режима На время', 'Девятый тренировочный текст.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 10 для режима На время', 'Десятый текст для режима тренировки скорости.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 11 для режима На время', 'Одиннадцатый текст для тренировки на время.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 12 для режима На время', 'Двенадцатый тест для повышения скорости набора.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 13 для режима На время', 'Тринадцатый тренировочный текст для набора.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 14 для режима На время', 'Четырнадцатый текст для тренировки на время.' FROM modes WHERE key = 'time'
+  UNION ALL
+  SELECT id, 'Тестовый текст 15 для режима На время', 'Пятнадцатый тест для улучшения навыков набора.' FROM modes WHERE key = 'time'
+) AS t
 WHERE NOT EXISTS (
-    SELECT 1 FROM quotes WHERE content = 'Жизнь — это то, что с тобой происходит, пока ты строишь планы.'
-)
-LIMIT 1;
+  SELECT 1 FROM texts WHERE mode_id = t.id AND title = t.title
+);
 
-INSERT INTO quotes (content, length_cat, author)
-SELECT 'Всё проходит, и это тоже пройдёт.', 'short', 'Персидская пословица'
-WHERE NOT EXISTS (
-    SELECT 1 FROM quotes WHERE content = 'Всё проходит, и это тоже пройдёт.'
-)
-LIMIT 1;
+-- Для режима 'quotes'
+-- 12 цитат категории short
+INSERT INTO quotes (content, length_cat, author) SELECT 'Жизнь — это путь, а не пункт назначения.', 'short', 'Будда' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Жизнь — это путь, а не пункт назначения.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Верь в себя.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Верь в себя.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Каждый день — шанс начать заново.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Каждый день — шанс начать заново.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Сделай первый шаг.', 'short', 'Мартин Лютер Кинг' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Сделай первый шаг.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Возможности не ждут.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Возможности не ждут.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Твори добро.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Твори добро.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Не бойся ошибаться.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Не бойся ошибаться.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Сила в простоте.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Сила в простоте.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Учись и развивайся.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Учись и развивайся.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Будь собой.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Будь собой.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Не сдавайся.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Не сдавайся.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Время — ценный ресурс.', 'short', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Время — ценный ресурс.') LIMIT 1;
 
--- Для режима 'code' (Пользовательский код) - 2 примера кода
+-- 12 цитат категории medium
+INSERT INTO quotes (content, length_cat, author) SELECT 'Неважно, как медленно ты идёшь, главное — не останавливаться.', 'medium', 'Конфуций' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Неважно, как медленно ты идёшь, главное — не останавливаться.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Учись, как будто будешь жить вечно, живи, как будто умрёшь сегодня.', 'medium', 'Махатма Ганди' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Учись, как будто будешь жить вечно, живи, как будто умрёшь сегодня.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Величайшая слава — не в том, чтобы никогда не падать, а в том, чтобы подниматься каждый раз.', 'medium', 'Конфуций' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Величайшая слава — не в том, чтобы никогда не падать, а в том, чтобы подниматься каждый раз.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Неудача — просто возможность начать снова, но уже более мудро.', 'medium', 'Генри Форд' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Неудача — просто возможность начать снова, но уже более мудро.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Твое время ограничено, не трать его, живя чужой жизнью.', 'medium', 'Стив Джобс' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Твое время ограничено, не трать его, живя чужой жизнью.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Секрет перемен — сосредоточить всю энергию не на борьбе со старым, а на создании нового.', 'medium', 'Сократ' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Секрет перемен — сосредоточить всю энергию не на борьбе со старым, а на создании нового.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Жизнь — это то, что с тобой происходит, пока ты строишь планы.', 'medium', 'Джон Леннон' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Жизнь — это то, что с тобой происходит, пока ты строишь планы.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Будь изменением, которое хочешь видеть в мире.', 'medium', 'Махатма Ганди' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Будь изменением, которое хочешь видеть в мире.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Действия — ключ к любому успеху.', 'medium', 'Пабло Пикассо' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Действия — ключ к любому успеху.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Верь, что можешь — и ты уже на полпути.', 'medium', 'Теодор Рузвельт' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Верь, что можешь — и ты уже на полпути.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Каждое утро — новая возможность изменить свою жизнь.', 'medium', 'Неизвестный автор' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Каждое утро — новая возможность изменить свою жизнь.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Если хочешь подняться — не строй лестницу на чужих спинах.', 'medium', 'Неизвестный автор' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Если хочешь подняться — не строй лестницу на чужих спинах.') LIMIT 1;
+
+-- 12 цитат категории long
+INSERT INTO quotes (content, length_cat, author) SELECT 'Жизнь коротка, искусство вечно, возможность мимолетна, опыт обманчив, решение трудно.', 'long', 'Гиппократ' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Жизнь коротка, искусство вечно, возможность мимолетна, опыт обманчив, решение трудно.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Человек не может открыть новые океаны, пока не имеет мужества потерять берег из виду.', 'long', 'Андре Жид' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Человек не может открыть новые океаны, пока не имеет мужества потерять берег из виду.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Истинное путешествие открытий не в поисках новых земель, а в новом взгляде на вещи.', 'long', 'Марсель Пруст' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Истинное путешествие открытий не в поисках новых земель, а в новом взгляде на вещи.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Сила человека не в том, что он может делать, а в том, что он способен преодолеть.', 'long', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Сила человека не в том, что он может делать, а в том, что он способен преодолеть.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Величайшее благо — это счастье, и каждый человек стремится к нему, даже если не знает, как его найти.', 'long', 'Аристотель' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Величайшее благо — это счастье, и каждый человек стремится к нему, даже если не знает, как его найти.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Будущее принадлежит тем, кто верит в красоту своих мечтаний.', 'long', 'Элеонор Рузвельт' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Будущее принадлежит тем, кто верит в красоту своих мечтаний.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Величие человека определяется не его успехами, а способностью подниматься после поражений.', 'long', 'Неизвестный' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Величие человека определяется не его успехами, а способностью подниматься после поражений.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Творчество — это позволение себе ошибаться, а искусство — это знание, какие ошибки оставить.', 'long', 'Скотт Адамс' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Творчество — это позволение себе ошибаться, а искусство — это знание, какие ошибки оставить.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Мы не можем изменить направление ветра, но можем настроить паруса так, чтобы всегда достигать цели.', 'long', 'Джим Рон' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Мы не можем изменить направление ветра, но можем настроить паруса так, чтобы всегда достигать цели.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Успех — это не ключ к счастью. Счастье — это ключ к успеху. Если ты любишь то, что делаешь, ты будешь успешен.', 'long', 'Альберт Швейцер' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Успех — это не ключ к счастью. Счастье — это ключ к успеху. Если ты любишь то, что делаешь, ты будешь успешен.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Жизнь измеряется не количеством вдохов, а моментами, когда захватывает дух.', 'long', 'Майя Энджелоу' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Жизнь измеряется не количеством вдохов, а моментами, когда захватывает дух.') LIMIT 1;
+INSERT INTO quotes (content, length_cat, author) SELECT 'Чем больше ты читаешь, тем больше знаешь. Чем больше ты знаешь, тем дальше идёшь.', 'long', 'Фрэнсис Бэкон' WHERE NOT EXISTS (SELECT 1 FROM quotes WHERE content = 'Чем больше ты читаешь, тем больше знаешь. Чем больше ты знаешь, тем дальше идёшь.') LIMIT 1;
+
+
+
+-- Для режима 'code' (Пользовательский код)
 INSERT INTO code_snippets (lang, title, content)
-SELECT 'cpp', 'Пример Hello World на C++', 'std::cout << "Привет, мир!" << std::endl;'
+SELECT 'cpp', 'Пример цикла for на C++', $$
+for (int i = 0; i < 5; ++i) {
+    std::cout << i << std::endl;
+}
+$$
 WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Пример Hello World на C++'
+    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на C++'
 )
 LIMIT 1;
 
 INSERT INTO code_snippets (lang, title, content)
-SELECT 'python', 'Пример Hello World на Python', 'print("Привет, мир!")'
+SELECT 'python', 'Пример цикла for на Python', $$
+for i in range(5):
+    print(i)
+$$
 WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Пример Hello World на Python'
+    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на Python'
 )
 LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'javascript', 'Пример цикла for на JavaScript', $$
+for (let i = 0; i < 5; i++) {
+    console.log(i);
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на JavaScript'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'java', 'Пример цикла for на Java', $$
+for (int i = 0; i < 5; i++) {
+    System.out.println(i);
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на Java'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'cpp', 'Условный оператор if на C++', $$
+int a = 10;
+if (a > 5) {
+    std::cout << "a больше 5" << std::endl;
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на C++'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'python', 'Условный оператор if на Python', $$
+a = 10
+if a > 5:
+    print("a больше 5")
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на Python'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'javascript', 'Условный оператор if на JavaScript', $$
+let a = 10;
+if (a > 5) {
+    console.log("a больше 5");
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на JavaScript'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'java', 'Условный оператор if на Java', $$
+int a = 10;
+if (a > 5) {
+    System.out.println("a больше 5");
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на Java'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'cpp', 'Функция на C++', $$
+int sum(int a, int b) {
+    return a + b;
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Функция на C++'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'python', 'Функция на Python', $$
+def sum(a, b):
+    return a + b
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Функция на Python'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'javascript', 'Функция на JavaScript', $$
+function sum(a, b) {
+    return a + b;
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Функция на JavaScript'
+)
+LIMIT 1;
+
+INSERT INTO code_snippets (lang, title, content)
+SELECT 'java', 'Функция на Java', $$
+int sum(int a, int b) {
+    return a + b;
+}
+$$
+WHERE NOT EXISTS (
+    SELECT 1 FROM code_snippets WHERE title = 'Функция на Java'
+)
+LIMIT 1;
+
+
+-- Для режима 'words'
+INSERT INTO words (word) VALUES
+  ('альфа'),
+  ('бета'),
+  ('гамма'),
+  ('дельта'),
+  ('эпсилон'),
+  ('зета'),
+  ('эта'),
+  ('тета'),
+  ('йота'),
+  ('каппа'),
+  ('ламбда'),
+  ('мю'),
+  ('ню'),
+  ('кси'),
+  ('омикрон'),
+  ('пи'),
+  ('ро'),
+  ('сигма'),
+  ('тау'),
+  ('упсилон'),
+  ('фи'),
+  ('хи'),
+  ('пси'),
+  ('омега'),
+  ('слово1'),
+  ('слово2'),
+  ('слово3'),
+  ('слово4'),
+  ('слово5'),
+  ('слово6'),
+  ('слово7'),
+  ('слово8'),
+  ('слово9'),
+  ('слово10'),
+  ('слово11'),
+  ('слово12'),
+  ('слово13'),
+  ('слово14'),
+  ('слово15'),
+  ('слово16');
+
+
 -- ------------------------------------------------------------
 -- 14) Владельцы и права
 -- ------------------------------------------------------------
-ALTER SCHEMA public                OWNER TO textuser;
+
+-- Владелец схемы и прав на БД
+ALTER SCHEMA public OWNER TO textuser;
 GRANT ALL PRIVILEGES ON DATABASE textdb TO textuser;
 
-ALTER TABLE texts                  OWNER TO textuser;
-ALTER TABLE players                OWNER TO textuser;
-ALTER TABLE games                  OWNER TO textuser;
-ALTER TABLE player_cumulative_stats OWNER TO textuser;
+-- Сначала передаём таблицы
 ALTER TABLE modes                  OWNER TO textuser;
+ALTER TABLE texts                  OWNER TO textuser;
 ALTER TABLE words                  OWNER TO textuser;
 ALTER TABLE quotes                 OWNER TO textuser;
 ALTER TABLE code_snippets          OWNER TO textuser;
+ALTER TABLE players                OWNER TO textuser;
+ALTER TABLE games                  OWNER TO textuser;
+ALTER TABLE player_cumulative_stats OWNER TO textuser;
 
+-- Затем указываем, какие последовательности принадлежат каким колонкам
+-- Это нужно, чтобы избежать ошибок при смене владельца
+-- и позволяет PostgreSQL автоматически менять владельца SEQUENCE при ALTER TABLE
+
+-- Привязка SEQUENCE к колонкам (если они ещё не привязаны)
+ALTER SEQUENCE IF EXISTS texts_id_seq   OWNED BY texts.id;
+ALTER SEQUENCE IF EXISTS players_id_seq OWNED BY players.id;
+ALTER SEQUENCE IF EXISTS games_id_seq   OWNED BY games.id;
+
+-- Владельцы материализованных представлений
 ALTER MATERIALIZED VIEW leaderboard_60 OWNER TO textuser;
 ALTER MATERIALIZED VIEW leaderboard_15 OWNER TO textuser;
 
-ALTER FUNCTION prune_old_games()       OWNER TO textuser;
+-- Владельцы функций
+ALTER FUNCTION prune_old_games()         OWNER TO textuser;
 ALTER FUNCTION update_cumulative_stats() OWNER TO textuser;
 ALTER FUNCTION refresh_leaderboards()    OWNER TO textuser;
