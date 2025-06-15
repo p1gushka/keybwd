@@ -55,3 +55,32 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     AUTOUIC ON
     AUTORCC ON
 )
+
+# --- GoogleTest ---
+
+option(BUILD_TESTS "Build tests" NO)
+
+if(BUILD_TESTS)
+    enable_testing()
+    find_package(GTest REQUIRED)
+
+    add_executable(test_text_database
+        test/test_text_database.cpp
+        ${CMAKE_SOURCE_DIR}/text_database.cpp
+    )
+
+    target_include_directories(test_text_database PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${LIBPQXX_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(test_text_database
+        PRIVATE
+        GTest::GTest
+        GTest::Main
+        ${LIBPQXX_LIBRARIES}
+        pthread
+    )
+
+    add_test(NAME TextDatabaseTests COMMAND test_text_database)
+endif()
