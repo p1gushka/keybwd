@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <QSpinBox>
+#include "../common_types.h"
 
 class QPushButton;
 class QTextEdit;
@@ -22,7 +23,7 @@ public:
     QString getLanguage() const;
 
 signals:
-    void modeSelected(const QString &mode, const QString &customText = "");
+    void modeSelected(const QString &mode, const ModeParams &params);
 
 private:
     void setupTimeModeOptions(QVBoxLayout *layout);

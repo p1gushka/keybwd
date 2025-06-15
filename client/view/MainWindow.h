@@ -1,10 +1,12 @@
 #pragma once
 #include <QMainWindow>
 #include <QStackedWidget>
+#include <QString>
 #include "screens/TypingScreen.h"
 #include "screens/ModeSelectionScreen.h"
 #include "screens/ResultsScreen.h"
 #include "../../database/text_database.hpp"
+#include "common_types.h"
 
 namespace view
 {
@@ -18,7 +20,7 @@ namespace view
         explicit MainWindow(QWidget *parent = nullptr);
 
     private slots:
-        void onModeSelected(const QString &mode);
+        void onModeSelected(const QString &mode, const ModeParams &params);
         void onTypingFinished();
         void onRepeat();
         void onRestart();
@@ -29,5 +31,6 @@ namespace view
         ModeSelectionScreen *modeSelection;
         TypingScreen *typingScreen;
         ResultsScreen *resultsScreen;
+        ModeParams currentParams;
     };
 } // namespace view

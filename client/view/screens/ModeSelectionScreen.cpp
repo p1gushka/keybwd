@@ -39,7 +39,22 @@ ModeSelectionScreen::ModeSelectionScreen(QWidget *parent) : QWidget(parent) {
     startButton = new QPushButton("Начать", this);
     startButton->setEnabled(false);
     connect(startButton, &QPushButton::clicked, [this]() {
-        emit modeSelected(currentMode);
+        ModeParams params;
+        params.mode = currentMode;
+        
+        if (currentMode == "time") {
+            params.timeLimit = timeComboBox->currentText().toInt();
+        } else if (currentMode == "words") {
+            params.wordCount = wordsComboBox->currentText().toInt();
+        } else if (currentMode == "quotes") {
+            params.quoteLength = quoteLengthComboBox->currentText();
+        } else if (currentMode == "custom") {
+            params.customText = customTextEdit->toPlainText();
+        } else if (currentMode == "code") {
+            params.language = languageComboBox->currentText();
+        }
+        
+        emit modeSelected(currentMode, params);
     });
     mainLayout->addWidget(startButton);
 }
