@@ -1,19 +1,20 @@
 #include "text_database.hpp"
 #include <pqxx/pqxx>
-#include <iostream>
+#include <optional>
+#include <stdexcept>
 #include <functional>
+#include <iostream>
 
 namespace server
 {
     namespace
     {
-        // Простое хэширование пароля
         std::string simple_hash(const std::string &input)
         {
             std::hash<std::string> hasher;
             return std::to_string(hasher(input));
         }
-    }
+    } // namespace
 
     TextDatabase::TextDatabase(const std::string &host,
                                const std::string &dbname,
@@ -30,7 +31,9 @@ namespace server
         std::cout << "Connected to text database successfully\n";
     }
 
-    bool TextDatabase::register_player(const std::string &login, const std::string &username, const std::string &password)
+    bool TextDatabase::register_player(const std::string &login,
+                                       const std::string &username,
+                                       const std::string &password)
     {
         verify_connection();
         std::string hash = simple_hash(password);
@@ -45,7 +48,8 @@ namespace server
         return true;
     }
 
-    std::optional<int> TextDatabase::authenticate_player(const std::string &login, const std::string &password)
+    std::optional<int> TextDatabase::authenticate_player(const std::string &login,
+                                                         const std::string &password)
     {
         verify_connection();
         std::string hash = simple_hash(password);
@@ -55,7 +59,7 @@ namespace server
             login, hash);
         if (res.empty())
             return std::nullopt;
-        return res[0]["id"].as<int>();
+        return res[0][0].as<int>();
     }
 
     std::string TextDatabase::get_username(int player_id) const
@@ -68,35 +72,90 @@ namespace server
         return res[0][0].as<std::string>();
     }
 
-    void TextDatabase::insert_text(const std::string &content, const std::string &title)
+    void TextDatabase::insert_text(int mode_id,
+                                   const std::string &title,
+                                   const std::string &content)
     {
         verify_connection();
         pqxx::work tx(*conn_);
-        try
-        {
-            tx.exec_params("INSERT INTO texts (title, content) VALUES ($1, $2)", title, content);
-            tx.commit();
-        }
-        catch (const std::exception &e)
-        {
-            tx.abort();
-            throw std::runtime_error("Insert failed: " + std::string(e.what()));
-        }
+        tx.exec_params(
+            "INSERT INTO texts (mode_id, title, content) VALUES ($1, $2, $3)",
+            mode_id, title, content);
+        tx.commit();
     }
 
-    std::string TextDatabase::get_random_text() const
+    std::string TextDatabase::get_random_text(int mode_id) const
     {
         verify_connection();
         pqxx::nontransaction tx(*conn_);
-        try
-        {
-            auto res = tx.exec1("SELECT content FROM texts ORDER BY RANDOM() LIMIT 1");
-            return res[0].as<std::string>();
-        }
-        catch (const pqxx::unexpected_rows &)
-        {
-            return "";
-        }
+        auto res = tx.exec_params(
+            "SELECT content FROM texts WHERE mode_id = $1 ORDER BY RANDOM() LIMIT 1",
+            mode_id);
+        return res.empty() ? std::string() : res[0][0].as<std::string>();
+    }
+
+    void TextDatabase::insert_word(const std::string &word)
+    {
+        verify_connection();
+        pqxx::work tx(*conn_);
+        tx.exec_params("INSERT INTO words (word) VALUES ($1) ON CONFLICT DO NOTHING", word);
+        tx.commit();
+    }
+
+    std::vector<std::string> TextDatabase::get_random_words(int count) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params(
+            "SELECT word FROM words ORDER BY RANDOM() LIMIT $1", count);
+        std::vector<std::string> list;
+        for (auto row : res)
+            list.push_back(row[0].as<std::string>());
+        return list;
+    }
+
+    void TextDatabase::insert_quote(const std::string &content,
+                                    const std::string &length_cat,
+                                    const std::string &author)
+    {
+        verify_connection();
+        pqxx::work tx(*conn_);
+        tx.exec_params(
+            "INSERT INTO quotes (content, length_cat, author) VALUES ($1, $2, $3)",
+            content, length_cat, author);
+        tx.commit();
+    }
+
+    std::string TextDatabase::get_random_quote(const std::string &length_cat) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params(
+            "SELECT content FROM quotes WHERE length_cat = $1 ORDER BY RANDOM() LIMIT 1",
+            length_cat);
+        return res.empty() ? std::string() : res[0][0].as<std::string>();
+    }
+
+    void TextDatabase::insert_code_snippet(const std::string &lang,
+                                           const std::string &title,
+                                           const std::string &content)
+    {
+        verify_connection();
+        pqxx::work tx(*conn_);
+        tx.exec_params(
+            "INSERT INTO code_snippets (lang, title, content) VALUES ($1, $2, $3)",
+            lang, title, content);
+        tx.commit();
+    }
+
+    std::string TextDatabase::get_random_code(const std::string &lang) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params(
+            "SELECT content FROM code_snippets WHERE lang = $1 ORDER BY RANDOM() LIMIT 1",
+            lang);
+        return res.empty() ? std::string() : res[0][0].as<std::string>();
     }
 
     void TextDatabase::print_all() const
@@ -158,8 +217,8 @@ namespace server
         verify_connection();
         pqxx::work tx(*conn_);
         tx.exec_params(
-            "INSERT INTO games(player_id, mode, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            "INSERT INTO games (player_id, mode, speed_wpm, raw_wpm, accuracy, correct_symbols, wrong_symbols, missed_symbols, extra_symbols)"
+            " VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
             player_id, mode, speed_wpm, raw_wpm, accuracy,
             correct_symbols, wrong_symbols, missed_symbols, extra_symbols);
         tx.commit();
@@ -170,8 +229,8 @@ namespace server
         verify_connection();
         pqxx::nontransaction tx(*conn_);
         auto res = tx.exec_params(
-            "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games "
-            "FROM player_cumulative_stats WHERE player_id = $1",
+            "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games"
+            " FROM player_cumulative_stats WHERE player_id = $1",
             player_id);
         if (res.empty())
             throw std::runtime_error("No statistics for player");
@@ -179,40 +238,27 @@ namespace server
         double sum_speed = res[0]["sum_speed_wpm"].as<double>();
         double sum_raw = res[0]["sum_raw_wpm"].as<double>();
         double sum_acc = res[0]["sum_accuracy"].as<double>();
-        double sum_corr = res[0]["sum_correct_symbols"].as<double>();
-        double sum_wrong = res[0]["sum_wrong_symbols"].as<double>();
-        double sum_missed = res[0]["sum_missed_symbols"].as<double>();
-        double sum_extra = res[0]["sum_extra_symbols"].as<double>();
         double total = res[0]["total_games"].as<double>();
 
         AverageStats stats;
         stats.avg_speed_wpm = sum_speed / total;
         stats.avg_raw_wpm = sum_raw / total;
         stats.avg_accuracy = sum_acc / total;
-        stats.avg_correct_symbols = sum_corr / total;
-        stats.avg_wrong_symbols = sum_wrong / total;
-        stats.avg_missed_symbols = sum_missed / total;
-        stats.avg_extra_symbols = sum_extra / total;
+        stats.avg_correct_symbols = res[0]["sum_correct_symbols"].as<double>() / total;
+        stats.avg_wrong_symbols = res[0]["sum_wrong_symbols"].as<double>() / total;
+        stats.avg_missed_symbols = res[0]["sum_missed_symbols"].as<double>() / total;
+        stats.avg_extra_symbols = res[0]["sum_extra_symbols"].as<double>() / total;
         return stats;
     }
 
-    std::vector<server::LeaderboardEntry> TextDatabase::get_leaderboard(const std::string &mode, int limit) const
+    std::vector<LeaderboardEntry> TextDatabase::get_leaderboard(const std::string &mode) const
     {
-        if (mode != "60" && mode != "15")
-        {
-            throw std::invalid_argument("Invalid mode for leaderboard: " + mode);
-        }
-
         verify_connection();
         pqxx::nontransaction tx(*conn_);
         std::string view = "leaderboard_" + mode;
-        auto query =
-            "SELECT username, speed_wpm, accuracy, played_at "
-            "FROM " +
-            view + " ORDER BY speed_wpm DESC LIMIT $1";
-
-        auto res = tx.exec_params(query, limit);
-        std::vector<server::LeaderboardEntry> board;
+        auto res = tx.exec_params(
+            "SELECT username, speed_wpm, accuracy, played_at FROM " + view + " ORDER BY speed_wpm DESC");
+        std::vector<LeaderboardEntry> board;
         for (auto row : res)
         {
             board.push_back({row["username"].as<std::string>(),
@@ -222,6 +268,7 @@ namespace server
         }
         return board;
     }
+
     void TextDatabase::refresh_leaderboards()
     {
         verify_connection();
