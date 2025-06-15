@@ -11,6 +11,7 @@ using namespace view;
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), db("localhost", "textdb", "textuser", "secure_password", "5432")
 {
     resize(1000, 700);
+
     setWindowTitle("Клавиатурный Тренажёр");
 
     stack = new QStackedWidget(this);

@@ -32,7 +32,7 @@ private:
     void setupCodeModeOptions(QVBoxLayout *layout);
     
     QPushButton *createModeButton(const QString &label, const QString &mode);
-    
+
     QString currentMode;
     QTextEdit *customTextEdit;
     QWidget *currentOptionsPanel;
