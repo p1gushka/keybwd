@@ -1,3 +1,5 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "text_database.hpp"
 #include <pqxx/pqxx>
 #include <optional>
@@ -279,3 +281,4 @@ namespace server
     }
 
 } // namespace server
+#pragma GCC diagnostic pop
