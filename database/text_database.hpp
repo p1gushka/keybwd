@@ -9,6 +9,14 @@
 namespace server
 {
 
+    struct GameRecord
+    {
+        std::string mode;
+        double speed_wpm;
+        double accuracy;
+        std::string played_at;
+    };
+
     struct AverageStats
     {
         double avg_speed_wpm;
@@ -86,8 +94,11 @@ namespace server
                          int missed_symbols,
                          int extra_symbols);
 
+        std::vector<GameRecord> get_last_games(int player_id, int limit = 10) const;
         AverageStats get_average_stats(int player_id) const;
         std::vector<LeaderboardEntry> get_leaderboard(const std::string &mode) const;
+
+        std::string get_username_by_login(const std::string &login);
     };
 
 } // namespace server

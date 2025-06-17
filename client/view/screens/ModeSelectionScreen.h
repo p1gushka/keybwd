@@ -9,40 +9,43 @@ class QComboBox;
 class QLabel;
 class QVBoxLayout;
 
-namespace view {
+namespace view
+{
 
-class ModeSelectionScreen : public QWidget {
-    Q_OBJECT
-public:
-    explicit ModeSelectionScreen(QWidget *parent = nullptr);
-    QString getSelectedMode() const;
-    int getTimeLimit() const;
-    int getWordCount() const;
-    QString getCustomText() const;
-    QString getQuoteLength() const;
-    QString getLanguage() const;
+    class ModeSelectionScreen : public QWidget
+    {
+        Q_OBJECT
+    public:
+        explicit ModeSelectionScreen(QWidget *parent = nullptr);
+        QString getSelectedMode() const;
+        int getTimeLimit() const;
+        int getWordCount() const;
+        QString getCustomText() const;
+        QString getQuoteLength() const;
+        QString getLanguage() const;
 
-signals:
-    void modeSelected(const QString &mode, const ModeParams &params);
+    signals:
+        void modeSelected(const QString &mode, const ModeParams &params);
+        void statsRequested();
 
-private:
-    void setupTimeModeOptions(QVBoxLayout *layout);
-    void setupWordCountModeOptions(QVBoxLayout *layout);
-    void setupQuoteModeOptions(QVBoxLayout *layout);
-    void setupCustomTextMode(QVBoxLayout *layout);
-    void setupCodeModeOptions(QVBoxLayout *layout);
-    
-    QPushButton *createModeButton(const QString &label, const QString &mode);
+    private:
+        void setupTimeModeOptions(QVBoxLayout *layout);
+        void setupWordCountModeOptions(QVBoxLayout *layout);
+        void setupQuoteModeOptions(QVBoxLayout *layout);
+        void setupCustomTextMode(QVBoxLayout *layout);
+        void setupCodeModeOptions(QVBoxLayout *layout);
 
-    QString currentMode;
-    QTextEdit *customTextEdit;
-    QWidget *currentOptionsPanel;
-    QComboBox *timeComboBox;
-    QComboBox *wordsComboBox;
-    QComboBox *quoteLengthComboBox;
-    QComboBox *languageComboBox;
-    QLabel *optionsLabel;
-    QPushButton *startButton;
-};
+        QPushButton *createModeButton(const QString &label, const QString &mode);
+
+        QString currentMode;
+        QTextEdit *customTextEdit;
+        QWidget *currentOptionsPanel;
+        QComboBox *timeComboBox;
+        QComboBox *wordsComboBox;
+        QComboBox *quoteLengthComboBox;
+        QComboBox *languageComboBox;
+        QLabel *optionsLabel;
+        QPushButton *startButton;
+    };
 
 } // namespace view

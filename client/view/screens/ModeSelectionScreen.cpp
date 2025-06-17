@@ -9,10 +9,11 @@
 
 using namespace view;
 
-ModeSelectionScreen::ModeSelectionScreen(QWidget *parent) : QWidget(parent) {
+ModeSelectionScreen::ModeSelectionScreen(QWidget *parent) : QWidget(parent)
+{
     auto *mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(new QLabel("Выберите режим:", this));
-    
+
     // Контейнер для кнопок режимов
     auto *modesLayout = new QHBoxLayout();
     modesLayout->addWidget(createModeButton("На время", "time"));
@@ -21,24 +22,30 @@ ModeSelectionScreen::ModeSelectionScreen(QWidget *parent) : QWidget(parent) {
     modesLayout->addWidget(createModeButton("Пользовательский", "custom"));
     modesLayout->addWidget(createModeButton("Код", "code"));
     mainLayout->addLayout(modesLayout);
-    
+
+    // Добавляем кнопку "Моя статистика" под кнопками режимов
+    auto *statsBtn = new QPushButton("Моя статистика", this);
+    connect(statsBtn, &QPushButton::clicked, this, [this]()
+            { emit statsRequested(); });
+    mainLayout->addWidget(statsBtn);
+
     // Область для опций режима
     auto *optionsFrame = new QFrame(this);
     optionsFrame->setFrameShape(QFrame::StyledPanel);
     auto *optionsLayout = new QVBoxLayout(optionsFrame);
-    
+
     optionsLabel = new QLabel("Настройки режима:", this);
     optionsLayout->addWidget(optionsLabel);
-    
+
     currentOptionsPanel = new QWidget(this);
     optionsLayout->addWidget(currentOptionsPanel);
     mainLayout->addWidget(optionsFrame);
-    
-    // Кнопка начала
 
+    // Кнопка начала
     startButton = new QPushButton("Начать", this);
     startButton->setEnabled(false);
-    connect(startButton, &QPushButton::clicked, [this]() {
+    connect(startButton, &QPushButton::clicked, [this]()
+            {
         ModeParams params;
         params.mode = currentMode;
         
@@ -54,15 +61,16 @@ ModeSelectionScreen::ModeSelectionScreen(QWidget *parent) : QWidget(parent) {
             params.language = languageComboBox->currentText();
         }
         
-        emit modeSelected(currentMode, params);
-    });
+        emit modeSelected(currentMode, params); });
     mainLayout->addWidget(startButton);
 }
 
-QPushButton* ModeSelectionScreen::createModeButton(const QString &label, const QString &mode) {
-   
+QPushButton *ModeSelectionScreen::createModeButton(const QString &label, const QString &mode)
+{
+
     auto *btn = new QPushButton(label, this);
-    connect(btn, &QPushButton::clicked, [this, mode]() {
+    connect(btn, &QPushButton::clicked, [this, mode]()
+            {
         currentMode = mode;
         startButton->setEnabled(true); // Разблокируем кнопку при выборе режима        
         
@@ -91,71 +99,75 @@ QPushButton* ModeSelectionScreen::createModeButton(const QString &label, const Q
             setupCustomTextMode(panelLayout);
         } else if (mode == "code") {
             setupCodeModeOptions(panelLayout);
-        }
-    });
+        } });
     return btn;
 }
 
-void ModeSelectionScreen::setupTimeModeOptions(QVBoxLayout *layout) {
+void ModeSelectionScreen::setupTimeModeOptions(QVBoxLayout *layout)
+{
     optionsLabel->setText("Настройки: Режим на время");
-    
+
     auto *timeLayout = new QHBoxLayout();
     timeLayout->addWidget(new QLabel("Время (сек):", this));
-    
+
     timeComboBox = new QComboBox(this);
     timeComboBox->addItems({"10", "15", "30", "60"});
     timeLayout->addWidget(timeComboBox);
-    
+
     layout->addLayout(timeLayout);
 }
 
-void ModeSelectionScreen::setupWordCountModeOptions(QVBoxLayout *layout) {
+void ModeSelectionScreen::setupWordCountModeOptions(QVBoxLayout *layout)
+{
     optionsLabel->setText("Настройки: Режим по количеству слов");
-    
+
     auto *wordsLayout = new QHBoxLayout();
     wordsLayout->addWidget(new QLabel("Количество слов:", this));
-    
+
     wordsComboBox = new QComboBox(this);
     wordsComboBox->addItems({"10", "25", "50", "100"});
     wordsLayout->addWidget(wordsComboBox);
-    
+
     layout->addLayout(wordsLayout);
 }
 
-void ModeSelectionScreen::setupQuoteModeOptions(QVBoxLayout *layout) {
+void ModeSelectionScreen::setupQuoteModeOptions(QVBoxLayout *layout)
+{
     optionsLabel->setText("Настройки: Режим цитат");
-    
+
     auto *quoteLayout = new QHBoxLayout();
     quoteLayout->addWidget(new QLabel("Длина цитаты:", this));
-    
+
     quoteLengthComboBox = new QComboBox(this);
     quoteLengthComboBox->addItems({"Короткие", "Средние", "Длинные"});
     quoteLayout->addWidget(quoteLengthComboBox);
-    
+
     layout->addLayout(quoteLayout);
 }
 
-void ModeSelectionScreen::setupCustomTextMode(QVBoxLayout *layout) {
+void ModeSelectionScreen::setupCustomTextMode(QVBoxLayout *layout)
+{
     optionsLabel->setText("Настройки: Пользовательский текст");
-    
+
     auto *label = new QLabel("Введите текст для тренировки:", this);
     layout->addWidget(label);
-    
+
     customTextEdit = new QTextEdit(this);
     customTextEdit->setPlaceholderText("Введите текст для тренировки...");
     layout->addWidget(customTextEdit);
 }
 
-void ModeSelectionScreen::setupCodeModeOptions(QVBoxLayout *layout) {
+void ModeSelectionScreen::setupCodeModeOptions(QVBoxLayout *layout)
+{
     optionsLabel->setText("Настройки: Написание кода");
-    
+
     auto *langLayout = new QHBoxLayout();
     langLayout->addWidget(new QLabel("Язык программирования:", this));
-    
+
     languageComboBox = new QComboBox(this);
     languageComboBox->addItems({"C++", "Python", "JavaScript", "Java"});
     langLayout->addWidget(languageComboBox);
-    
+
     layout->addLayout(langLayout);
 }
 

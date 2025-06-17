@@ -1,18 +1,17 @@
-#include <QFont>
 #include <QApplication>
-#include "view/MainWindow.h"
-#include "../../database/text_database.hpp"
+#include <QFont>
+#include "view/AppController.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    
-    // Temporary
+
     QFont font = app.font();
     font.setPointSize(16);
     app.setFont(font);
 
-    view::MainWindow window;
-    window.show();
+    AppController controller(app);
+    controller.run();
+
     return app.exec();
 }

@@ -7,10 +7,10 @@
 #include <QHBoxLayout>
 #include <QRegularExpression>
 
-
-TypingScreen::TypingScreen(QWidget *parent) : QWidget(parent) {
+TypingScreen::TypingScreen(QWidget *parent) : QWidget(parent)
+{
     auto mainLayout = new QVBoxLayout(this);
-    
+
     // Панель информации (таймер/счетчик)
     auto infoLayout = new QHBoxLayout();
     timerLabel = new QLabel("00:00", this);
@@ -22,10 +22,10 @@ TypingScreen::TypingScreen(QWidget *parent) : QWidget(parent) {
 
     textDisplay = new QTextEdit(this);
     textDisplay->setReadOnly(true);
-    textDisplay->setFont(QFont("Courier New", 18));  // Моноширинный шрифт
+    textDisplay->setFont(QFont("Courier New", 18)); // Моноширинный шрифт
 
     inputField = new QTextEdit(this);
-    inputField->setFont(QFont("Courier New", 18));   // Моноширинный шрифт
+    inputField->setFont(QFont("Courier New", 18)); // Моноширинный шрифт
 
     finishButton = new QPushButton("Завершить", this);
 
@@ -40,30 +40,39 @@ TypingScreen::TypingScreen(QWidget *parent) : QWidget(parent) {
     connect(finishButton, &QPushButton::clicked, this, &TypingScreen::onFinishClicked);
 }
 
-void TypingScreen::setTimeLimit(int seconds) {
+void TypingScreen::setTimeLimit(int seconds)
+{
     timeLimit = seconds;
-    if (seconds > 0) {
+    if (seconds > 0)
+    {
         timerLabel->setText(QString("%1:%2")
-                            .arg(timeLimit / 60, 2, 10, QLatin1Char('0'))
-                            .arg(timeLimit % 60, 2, 10, QLatin1Char('0')));
+                                .arg(timeLimit / 60, 2, 10, QLatin1Char('0'))
+                                .arg(timeLimit % 60, 2, 10, QLatin1Char('0')));
         timerLabel->show();
-    } else {
+    }
+    else
+    {
         timerLabel->hide();
     }
 }
 
-void TypingScreen::setWordCount(int count) {
+void TypingScreen::setWordCount(int count)
+{
     wordCount = count;
     initialWordCount = count;
-    if (count > 0) {
+    if (count > 0)
+    {
         counterLabel->setText(QString("Осталось слов: %1").arg(wordCount));
         counterLabel->show();
-    } else {
+    }
+    else
+    {
         counterLabel->hide();
     }
 }
 
-void TypingScreen::setTargetText(const QString &text) {
+void TypingScreen::setTargetText(const QString &text)
+{
     targetText = text;
     textDisplay->setPlainText(text);
     inputField->clear();
@@ -72,86 +81,103 @@ void TypingScreen::setTargetText(const QString &text) {
     timerTyping.start();
     timerRaw.start();
     rawActive = true;
-    
+
     // Запускаем таймер если установлен лимит времени
-    if (timeLimit > 0) {
+    if (timeLimit > 0)
+    {
         startCountdown();
     }
 }
 
-void TypingScreen::startCountdown() {
+void TypingScreen::startCountdown()
+{
     countdownTimer->start(1000); // Обновление каждую секунду
 }
 
-void TypingScreen::updateTimer() {
-    if (timeLimit <= 0) {
+void TypingScreen::updateTimer()
+{
+    if (timeLimit <= 0)
+    {
         countdownTimer->stop();
         onFinishClicked();
         return;
     }
-    
+
     timeLimit--;
     timerLabel->setText(QString("%1:%2")
-                        .arg(timeLimit / 60, 2, 10, QLatin1Char('0'))
-                        .arg(timeLimit % 60, 2, 10, QLatin1Char('0')));
+                            .arg(timeLimit / 60, 2, 10, QLatin1Char('0'))
+                            .arg(timeLimit % 60, 2, 10, QLatin1Char('0')));
 }
 
-void TypingScreen::updateWordCounter(const QString &input) {
-    if (wordCount <= 0) return;
-    
+void TypingScreen::updateWordCounter(const QString &input)
+{
+    if (wordCount <= 0)
+        return;
+
     int currentWords = input.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts).size();
     int remaining = initialWordCount - currentWords;
-    
-    if (remaining <= 0) {
+
+    if (remaining <= 0)
+    {
         wordCount = 0;
         counterLabel->setText("Все слова набраны!");
         QTimer::singleShot(500, this, &TypingScreen::onFinishClicked);
-    } else {
+    }
+    else
+    {
         wordCount = remaining;
         counterLabel->setText(QString("Осталось слов: %1").arg(remaining));
     }
 }
 
-const SessionStats& TypingScreen::getStats() const {
+const SessionStats &TypingScreen::getStats() const
+{
     return stats;
 }
 
-void TypingScreen::onTextChanged() {
+void TypingScreen::onTextChanged()
+{
     QString input = inputField->toPlainText();
-    
+
     // Запускаем таймер при первом нажатии
-    if (isFirstKeyPress && !input.isEmpty()) {
+    if (isFirstKeyPress && !input.isEmpty())
+    {
         isFirstKeyPress = false;
-        if (timeLimit > 0) {
+        if (timeLimit > 0)
+        {
             startCountdown();
         }
     }
-    
+
     updateStats(input);
     applyHighlighting(input);
-    
-    if (initialWordCount > 0) {
+
+    if (initialWordCount > 0)
+    {
         updateWordCounter(input);
     }
 
-    if (input == targetText) {
+    if (input == targetText)
+    {
         QTimer::singleShot(500, this, &TypingScreen::onFinishClicked);
     }
 }
 
-void TypingScreen::onFinishClicked() {
+void TypingScreen::onFinishClicked()
+{
     stats.typingTimeMs = timerTyping.elapsed();
     stats.rawTimeMs = rawActive ? timerRaw.elapsed() : timerTyping.elapsed();
-    
+
     // Сбрасываем таймеры и лейблы
     countdownTimer->stop();
     timerLabel->setText("");
     counterLabel->setText("");
-    
+
     emit typingFinished();
 }
 
-void TypingScreen::updateStats(const QString &input) {
+void TypingScreen::updateStats(const QString &input)
+{
     stats.correctChars = 0;
     stats.incorrectChars = 0;
     stats.extraChars = 0;
@@ -159,21 +185,29 @@ void TypingScreen::updateStats(const QString &input) {
 
     rawActive = true;
 
-    for (int i = 0; i < input.length(); ++i) {
-        if (i < targetText.length()) {
-            if (input[i] == targetText[i]) {
+    for (int i = 0; i < input.length(); ++i)
+    {
+        if (i < targetText.length())
+        {
+            if (input[i] == targetText[i])
+            {
                 stats.correctChars++;
-            } else {
+            }
+            else
+            {
                 stats.incorrectChars++;
                 rawActive = false;
             }
-        } else {
+        }
+        else
+        {
             stats.extraChars++;
             rawActive = false;
         }
     }
 
-    if (input.length() < targetText.length()) {
+    if (input.length() < targetText.length())
+    {
         stats.missedChars = targetText.length() - input.length();
     }
 
@@ -182,21 +216,29 @@ void TypingScreen::updateStats(const QString &input) {
         stats.rawTimeMs = timerRaw.elapsed();
 }
 
-void TypingScreen::applyHighlighting(const QString &input) {
+void TypingScreen::applyHighlighting(const QString &input)
+{
     QTextDocument *doc = textDisplay->document();
     QTextCursor cursor(doc);
     cursor.select(QTextCursor::Document);
-    cursor.setCharFormat(QTextCharFormat());  // reset format
+    cursor.setCharFormat(QTextCharFormat()); // reset format
 
-    for (int i = 0; i < targetText.length(); ++i) {
+    for (int i = 0; i < targetText.length(); ++i)
+    {
         QTextCharFormat fmt;
-        if (i < input.length()) {
-            if (input[i] == targetText[i]) {
+        if (i < input.length())
+        {
+            if (input[i] == targetText[i])
+            {
                 fmt.setForeground(Qt::darkGreen);
-            } else {
+            }
+            else
+            {
                 fmt.setForeground(Qt::red);
             }
-        } else {
+        }
+        else
+        {
             fmt.setForeground(Qt::black);
         }
 
@@ -206,12 +248,13 @@ void TypingScreen::applyHighlighting(const QString &input) {
     }
 }
 
-void TypingScreen::setText(const QString &text) {
+void TypingScreen::setText(const QString &text)
+{
     targetText = text;
     textDisplay->setPlainText(text);
     inputField->clear();
 
-     stats = SessionStats();
+    stats = SessionStats();
     timerTyping.start();
     timerRaw.start();
     rawActive = true;
@@ -222,32 +265,35 @@ void TypingScreen::setText(const QString &text) {
     inputField->setFocus();
 }
 
-SessionStats TypingScreen::getSessionStats() const {
+SessionStats TypingScreen::getSessionStats() const
+{
     SessionStats result;
-    result.correctChars = stats.correctChars;       // Используем stats
-    result.incorrectChars = stats.incorrectChars;   // Используем stats
-    result.extraChars = stats.extraChars;           // Используем stats
-    result.missedChars = stats.missedChars;         // Используем stats
-    result.typingTimeMs = timerTyping.elapsed();    // Используем timerTyping
+    result.correctChars = stats.correctChars;     // Используем stats
+    result.incorrectChars = stats.incorrectChars; // Используем stats
+    result.extraChars = stats.extraChars;         // Используем stats
+    result.missedChars = stats.missedChars;       // Используем stats
+    result.typingTimeMs = timerTyping.elapsed();  // Используем timerTyping
     result.rawTimeMs = rawActive ? timerRaw.elapsed() : timerTyping.elapsed();
     return result;
 }
 
-void TypingScreen::reset() {
+void TypingScreen::reset()
+{
     inputField->clear();
     textDisplay->clear();
-    
+
     timeLimit = 0;
     wordCount = 0;
     initialWordCount = 0;
-    
+
     countdownTimer->stop();
     isFirstKeyPress = true;
     rawActive = true;
-    
+
     stats = SessionStats();
-    
-    if (!targetText.isEmpty()) {
+
+    if (!targetText.isEmpty())
+    {
         setText(targetText);
     }
 }

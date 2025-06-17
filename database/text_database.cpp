@@ -280,5 +280,44 @@ namespace server
         tx.commit();
     }
 
+    std::string TextDatabase::get_username_by_login(const std::string &login)
+    {
+        try
+        {
+            pqxx::work txn(*conn_);
+            pqxx::result r = txn.exec_params(
+                "SELECT username FROM players WHERE login = $1 LIMIT 1",
+                login);
+            txn.commit();
+            if (r.empty())
+                return "";
+            return r[0][0].as<std::string>();
+        }
+        catch (const std::exception &)
+        {
+            return "";
+        }
+    }
+    std::vector<GameRecord> TextDatabase::get_last_games(int player_id, int limit) const
+    {
+        verify_connection();
+        pqxx::nontransaction tx(*conn_);
+        auto res = tx.exec_params(
+            "SELECT mode, speed_wpm, accuracy, played_at "
+            "FROM games WHERE player_id = $1 "
+            "ORDER BY played_at DESC LIMIT $2",
+            player_id, limit);
+
+        std::vector<GameRecord> records;
+        for (const auto &row : res)
+        {
+            records.push_back({row["mode"].as<std::string>(),
+                               row["speed_wpm"].as<double>(),
+                               row["accuracy"].as<double>(),
+                               row["played_at"].as<std::string>()});
+        }
+        return records;
+    }
+
 } // namespace server
 #pragma GCC diagnostic pop
