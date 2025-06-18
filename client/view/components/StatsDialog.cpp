@@ -54,10 +54,10 @@ void StatsDialog::loadStats()
         auto avgStats = database->get_average_stats(playerId);
 
         QString text = QString("Средняя скорость: %1 WPM | Средняя точность: %2% | "
-                               "Правильных символов: %3 | Ошибок: %4 | Пропущено: %5 | Лишних: %6")
+                               "Наилучшая скорость: %3 WPM | Ошибок: %4 | Пропущено: %5 | Лишних: %6")
                            .arg(avgStats.avg_speed_wpm, 0, 'f', 2)
                            .arg(avgStats.avg_accuracy, 0, 'f', 2)
-                           .arg(avgStats.avg_correct_symbols, 0, 'f', 2)
+                           .arg(avgStats.best_speed_wpm, 0, 'f', 2)
                            .arg(avgStats.avg_wrong_symbols, 0, 'f', 2)
                            .arg(avgStats.avg_missed_symbols, 0, 'f', 2)
                            .arg(avgStats.avg_extra_symbols, 0, 'f', 2);

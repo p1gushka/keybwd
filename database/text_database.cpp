@@ -231,8 +231,10 @@ namespace server
         verify_connection();
         pqxx::nontransaction tx(*conn_);
         auto res = tx.exec_params(
-            "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games"
-            " FROM player_cumulative_stats WHERE player_id = $1",
+            "SELECT sum_speed_wpm, sum_raw_wpm, sum_accuracy, sum_correct_symbols, "
+            "sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols, total_games, "
+            "best_speed_wpm "
+            "FROM player_cumulative_stats WHERE player_id = $1",
             player_id);
         if (res.empty())
             throw std::runtime_error("No statistics for player");
@@ -250,6 +252,7 @@ namespace server
         stats.avg_wrong_symbols = res[0]["sum_wrong_symbols"].as<double>() / total;
         stats.avg_missed_symbols = res[0]["sum_missed_symbols"].as<double>() / total;
         stats.avg_extra_symbols = res[0]["sum_extra_symbols"].as<double>() / total;
+        stats.best_speed_wpm = res[0]["best_speed_wpm"].as<double>();
         return stats;
     }
 

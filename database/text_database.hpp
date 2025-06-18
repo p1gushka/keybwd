@@ -22,6 +22,7 @@ namespace server
         double avg_speed_wpm;
         double avg_raw_wpm;
         double avg_accuracy;
+        double best_speed_wpm;
         double avg_correct_symbols;
         double avg_wrong_symbols;
         double avg_missed_symbols;

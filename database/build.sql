@@ -121,14 +121,6 @@ CREATE INDEX IF NOT EXISTS idx_games_mode_player_played
 
 
 -- ------------------------------------------------------------
--- 9) Sequence владельцы (без ошибок, если их ещё нет)
--- ------------------------------------------------------------
-ALTER SEQUENCE IF EXISTS texts_id_seq   OWNER TO textuser;
-ALTER SEQUENCE IF EXISTS players_id_seq OWNER TO textuser;
-ALTER SEQUENCE IF EXISTS games_id_seq   OWNER TO textuser;
-
-
--- ------------------------------------------------------------
 -- 10) Триггер prune_old_games
 -- ------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_prune_games ON games;
@@ -166,7 +158,8 @@ CREATE TABLE IF NOT EXISTS player_cumulative_stats (
     sum_correct_symbols BIGINT   NOT NULL DEFAULT 0,
     sum_wrong_symbols   BIGINT   NOT NULL DEFAULT 0,
     sum_missed_symbols  BIGINT   NOT NULL DEFAULT 0,
-    sum_extra_symbols   BIGINT   NOT NULL DEFAULT 0
+    sum_extra_symbols   BIGINT   NOT NULL DEFAULT 0,
+    best_speed_wpm      NUMERIC(20,4) NOT NULL DEFAULT 0
 );
 
 DROP TRIGGER IF EXISTS trg_update_cumulative ON games;
@@ -175,21 +168,25 @@ RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO player_cumulative_stats(
         player_id, total_games, sum_speed_wpm, sum_raw_wpm, sum_accuracy,
-        sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols
+        sum_correct_symbols, sum_wrong_symbols, sum_missed_symbols, sum_extra_symbols,
+        best_speed_wpm
     ) VALUES (
         NEW.player_id, 1, NEW.speed_wpm, NEW.raw_wpm, NEW.accuracy,
-        NEW.correct_symbols, NEW.wrong_symbols, NEW.missed_symbols, NEW.extra_symbols
+        NEW.correct_symbols, NEW.wrong_symbols, NEW.missed_symbols, NEW.extra_symbols,
+        NEW.speed_wpm
     )
     ON CONFLICT (player_id) DO UPDATE
     SET
-      total_games         = player_cumulative_stats.total_games + 1,
-      sum_speed_wpm       = player_cumulative_stats.sum_speed_wpm + NEW.speed_wpm,
-      sum_raw_wpm         = player_cumulative_stats.sum_raw_wpm + NEW.raw_wpm,
-      sum_accuracy        = player_cumulative_stats.sum_accuracy + NEW.accuracy,
-      sum_correct_symbols = player_cumulative_stats.sum_correct_symbols + NEW.correct_symbols,
-      sum_wrong_symbols   = player_cumulative_stats.sum_wrong_symbols + NEW.wrong_symbols,
-      sum_missed_symbols  = player_cumulative_stats.sum_missed_symbols + NEW.missed_symbols,
-      sum_extra_symbols   = player_cumulative_stats.sum_extra_symbols + NEW.extra_symbols;
+        total_games         = player_cumulative_stats.total_games + 1,
+        sum_speed_wpm       = player_cumulative_stats.sum_speed_wpm + NEW.speed_wpm,
+        sum_raw_wpm         = player_cumulative_stats.sum_raw_wpm + NEW.raw_wpm,
+        sum_accuracy        = player_cumulative_stats.sum_accuracy + NEW.accuracy,
+        sum_correct_symbols = player_cumulative_stats.sum_correct_symbols + NEW.correct_symbols,
+        sum_wrong_symbols   = player_cumulative_stats.sum_wrong_symbols + NEW.wrong_symbols,
+        sum_missed_symbols  = player_cumulative_stats.sum_missed_symbols + NEW.missed_symbols,
+        sum_extra_symbols   = player_cumulative_stats.sum_extra_symbols + NEW.extra_symbols,
+        best_speed_wpm      = GREATEST(player_cumulative_stats.best_speed_wpm, NEW.speed_wpm)
+    ; 
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
@@ -197,7 +194,6 @@ CREATE TRIGGER trg_update_cumulative
   AFTER INSERT ON games
   FOR EACH ROW
   EXECUTE FUNCTION update_cumulative_stats();
-
 
 -- ------------------------------------------------------------
 -- 12) Материализованные представления и их обновление
@@ -330,8 +326,9 @@ INSERT INTO quotes (content, length_cat, author) SELECT 'Чем больше т�
 
 
 -- Для режима 'code' (Пользовательский код)
--- ==== Java ====
+ALTER TABLE code_snippets ADD CONSTRAINT unique_title UNIQUE (title);
 
+-- ==== Java ====
 INSERT INTO code_snippets (lang, title, content) VALUES
 ('java', 'Пример цикла for на Java',
 $$for (int i = 0; i < 5; i++) {
@@ -561,10 +558,11 @@ ALTER SEQUENCE IF EXISTS players_id_seq OWNED BY players.id;
 ALTER SEQUENCE IF EXISTS games_id_seq   OWNED BY games.id;
 
 -- Владельцы материализованных представлений
-ALTER MATERIALIZED VIEW leaderboard_60 OWNER TO textuser;
-ALTER MATERIALIZED VIEW leaderboard_15 OWNER TO textuser;
+-- ALTER MATERIALIZED VIEW leaderboard_60 OWNER TO textuser;
+-- ALTER MATERIALIZED VIEW leaderboard_15 OWNER TO textuser;
 
 -- Владельцы функций
 ALTER FUNCTION prune_old_games()         OWNER TO textuser;
 ALTER FUNCTION update_cumulative_stats() OWNER TO textuser;
-ALTER FUNCTION refresh_leaderboards()    OWNER TO textuser;
+-- ALTER FUNCTION refresh_leaderboards()    OWNER TO textuser;
+
