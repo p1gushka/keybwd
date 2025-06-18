@@ -141,7 +141,7 @@ BEGIN
           FROM games
          WHERE player_id = NEW.player_id
          ORDER BY played_at DESC
-         OFFSET 5
+         OFFSET 10
       );
     RETURN NULL;
 END;
@@ -150,6 +150,7 @@ CREATE TRIGGER trg_prune_games
   AFTER INSERT ON games
   FOR EACH ROW
   EXECUTE FUNCTION prune_old_games();
+CREATE INDEX IF NOT EXISTS idx_games_player_played_at ON games (player_id, played_at DESC);
 
 
 -- ------------------------------------------------------------
@@ -201,45 +202,45 @@ CREATE TRIGGER trg_update_cumulative
 -- ------------------------------------------------------------
 -- 12) Материализованные представления и их обновление
 -- ------------------------------------------------------------
-CREATE MATERIALIZED VIEW IF NOT EXISTS leaderboard_60 AS
-SELECT username, speed_wpm, accuracy, played_at
-  FROM (
-    SELECT DISTINCT ON (g.player_id)
-      p.username,
-      g.speed_wpm,
-      g.accuracy,
-      g.played_at
-    FROM games g
-    JOIN players p ON g.player_id = p.id
-   WHERE g.mode = '60'
-   ORDER BY g.player_id, g.speed_wpm DESC, g.accuracy DESC, g.played_at DESC
-  ) sub
- ORDER BY speed_wpm DESC
- LIMIT 10;
+-- CREATE MATERIALIZED VIEW IF NOT EXISTS leaderboard_60 AS
+-- SELECT username, speed_wpm, accuracy, played_at
+--   FROM (
+--     SELECT DISTINCT ON (g.player_id)
+--       p.username,
+--       g.speed_wpm,
+--       g.accuracy,
+--       g.played_at
+--     FROM games g
+--     JOIN players p ON g.player_id = p.id
+--    WHERE g.mode = '60'
+--    ORDER BY g.player_id, g.speed_wpm DESC, g.accuracy DESC, g.played_at DESC
+--   ) sub
+--  ORDER BY speed_wpm DESC
+--  LIMIT 10;
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS leaderboard_15 AS
-SELECT username, speed_wpm, accuracy, played_at
-  FROM (
-    SELECT DISTINCT ON (g.player_id)
-      p.username,
-      g.speed_wpm,
-      g.accuracy,
-      g.played_at
-    FROM games g
-    JOIN players p ON g.player_id = p.id
-   WHERE g.mode = '15'
-   ORDER BY g.player_id, g.speed_wpm DESC, g.accuracy DESC, g.played_at DESC
-  ) sub
- ORDER BY speed_wpm DESC
- LIMIT 10;
+-- CREATE MATERIALIZED VIEW IF NOT EXISTS leaderboard_15 AS
+-- SELECT username, speed_wpm, accuracy, played_at
+--   FROM (
+--     SELECT DISTINCT ON (g.player_id)
+--       p.username,
+--       g.speed_wpm,
+--       g.accuracy,
+--       g.played_at
+--     FROM games g
+--     JOIN players p ON g.player_id = p.id
+--    WHERE g.mode = '15'
+--    ORDER BY g.player_id, g.speed_wpm DESC, g.accuracy DESC, g.played_at DESC
+--   ) sub
+--  ORDER BY speed_wpm DESC
+--  LIMIT 10;
 
-CREATE OR REPLACE FUNCTION refresh_leaderboards()
-RETURNS VOID AS $$
-BEGIN
-    REFRESH MATERIALIZED VIEW leaderboard_60;
-    REFRESH MATERIALIZED VIEW leaderboard_15;
-END;
-$$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION refresh_leaderboards()
+-- RETURNS VOID AS $$
+-- BEGIN
+--     REFRESH MATERIALIZED VIEW leaderboard_60;
+--     REFRESH MATERIALIZED VIEW leaderboard_15;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
 
 -- ------------------------------------------------------------
@@ -329,138 +330,163 @@ INSERT INTO quotes (content, length_cat, author) SELECT 'Чем больше т�
 
 
 -- Для режима 'code' (Пользовательский код)
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'cpp', 'Пример цикла for на C++', $$
-for (int i = 0; i < 5; ++i) {
-    std::cout << i << std::endl;
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на C++'
-)
-LIMIT 1;
+-- ==== Java ====
 
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'python', 'Пример цикла for на Python', $$
-for i in range(5):
-    print(i)
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на Python'
-)
-LIMIT 1;
-
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'javascript', 'Пример цикла for на JavaScript', $$
-for (let i = 0; i < 5; i++) {
-    console.log(i);
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на JavaScript'
-)
-LIMIT 1;
-
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'java', 'Пример цикла for на Java', $$
-for (int i = 0; i < 5; i++) {
+INSERT INTO code_snippets (lang, title, content) VALUES
+('java', 'Пример цикла for на Java',
+$$for (int i = 0; i < 5; i++) {
     System.out.println(i);
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Пример цикла for на Java'
+}$$
 )
-LIMIT 1;
+ON CONFLICT (title) DO NOTHING;
 
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'cpp', 'Условный оператор if на C++', $$
-int a = 10;
-if (a > 5) {
-    std::cout << "a больше 5" << std::endl;
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на C++'
-)
-LIMIT 1;
-
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'python', 'Условный оператор if на Python', $$
-a = 10
-if a > 5:
-    print("a больше 5")
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на Python'
-)
-LIMIT 1;
-
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'javascript', 'Условный оператор if на JavaScript', $$
-let a = 10;
-if (a > 5) {
-    console.log("a больше 5");
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на JavaScript'
-)
-LIMIT 1;
-
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'java', 'Условный оператор if на Java', $$
-int a = 10;
+INSERT INTO code_snippets (lang, title, content) VALUES
+('java', 'Условный оператор if на Java',
+$$int a = 10;
 if (a > 5) {
     System.out.println("a больше 5");
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Условный оператор if на Java'
+}$$
 )
-LIMIT 1;
+ON CONFLICT (title) DO NOTHING;
 
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'cpp', 'Функция на C++', $$
-int sum(int a, int b) {
+INSERT INTO code_snippets (lang, title, content) VALUES
+('java', 'Функция на Java',
+$$int sum(int a, int b) {
     return a + b;
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Функция на C++'
+}$$
 )
-LIMIT 1;
+ON CONFLICT (title) DO NOTHING;
 
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'python', 'Функция на Python', $$
-def sum(a, b):
-    return a + b
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Функция на Python'
+INSERT INTO code_snippets (lang, title, content) VALUES
+('java', 'Класс и объект на Java',
+$$public class Person {
+    String name;
+    public Person(String name) {
+        this.name = name;
+    }
+    public void greet() {
+        System.out.println("Hello, " + name);
+    }
+}$$
 )
-LIMIT 1;
+ON CONFLICT (title) DO NOTHING;
 
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'javascript', 'Функция на JavaScript', $$
-function sum(a, b) {
+
+-- ==== JavaScript ====
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('javascript', 'Пример цикла for на JavaScript',
+$$for (let i = 0; i < 5; i++) {
+    console.log(i);
+}$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('javascript', 'Условный оператор if на JavaScript',
+$$let a = 10;
+if (a > 5) {
+    console.log("a больше 5");
+}$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('javascript', 'Функция на JavaScript',
+$$function sum(a, b) {
     return a + b;
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Функция на JavaScript'
+}$$
 )
-LIMIT 1;
+ON CONFLICT (title) DO NOTHING;
 
-INSERT INTO code_snippets (lang, title, content)
-SELECT 'java', 'Функция на Java', $$
-int sum(int a, int b) {
-    return a + b;
-}
-$$
-WHERE NOT EXISTS (
-    SELECT 1 FROM code_snippets WHERE title = 'Функция на Java'
+INSERT INTO code_snippets (lang, title, content) VALUES
+('javascript', 'Асинхронная функция на JavaScript',
+$$async function fetchData() {
+    const response = await fetch('https://api.example.com/data');
+    const data = await response.json();
+    console.log(data);
+}$$
 )
-LIMIT 1;
+ON CONFLICT (title) DO NOTHING;
+
+
+-- ==== Python ====
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('python', 'Пример цикла for на Python',
+$$for i in range(5):
+    print(i)$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('python', 'Условный оператор if на Python',
+$$a = 10
+if a > 5:
+    print("a больше 5")$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('python', 'Функция на Python',
+$$def sum(a, b):
+    return a + b$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('python', 'Класс и объект на Python',
+$$class Person:
+    def __init__(self, name):
+        self.name = name
+
+    def greet(self):
+        print(f"Hello, {self.name}")$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+
+-- ==== C++ ====
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('cpp', 'Пример цикла for на C++',
+$$for (int i = 0; i < 5; ++i) {
+    std::cout << i << std::endl;
+}$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('cpp', 'Условный оператор if на C++',
+$$int a = 10;
+if (a > 5) {
+    std::cout << "a больше 5" << std::endl;
+}$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('cpp', 'Функция на C++',
+$$int sum(int a, int b) {
+    return a + b;
+}$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+INSERT INTO code_snippets (lang, title, content) VALUES
+('cpp', 'Класс и объект на C++',
+$$class Person {
+public:
+    std::string name;
+    Person(const std::string& name) : name(name) {}
+    void greet() {
+        std::cout << "Hello, " << name << std::endl;
+    }
+};$$
+)
+ON CONFLICT (title) DO NOTHING;
+
+CREATE UNIQUE INDEX IF NOT EXISTS unique_code_snippets_title_idx ON code_snippets(title);
 
 
 -- Для режима 'words'

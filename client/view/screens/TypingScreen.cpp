@@ -165,6 +165,9 @@ void TypingScreen::onTextChanged()
 
 void TypingScreen::onFinishClicked()
 {
+    if (finishedAlready)
+        return;
+    finishedAlready = true;
     stats.typingTimeMs = timerTyping.elapsed();
     stats.rawTimeMs = rawActive ? timerRaw.elapsed() : timerTyping.elapsed();
 
@@ -259,8 +262,6 @@ void TypingScreen::setText(const QString &text)
     timerRaw.start();
     rawActive = true;
 
-    connect(inputField, &QTextEdit::textChanged, this, &TypingScreen::onTextChanged);
-
     isFirstKeyPress = true;
     inputField->setFocus();
 }
@@ -268,11 +269,11 @@ void TypingScreen::setText(const QString &text)
 SessionStats TypingScreen::getSessionStats() const
 {
     SessionStats result;
-    result.correctChars = stats.correctChars;     // Используем stats
-    result.incorrectChars = stats.incorrectChars; // Используем stats
-    result.extraChars = stats.extraChars;         // Используем stats
-    result.missedChars = stats.missedChars;       // Используем stats
-    result.typingTimeMs = timerTyping.elapsed();  // Используем timerTyping
+    result.correctChars = stats.correctChars;
+    result.incorrectChars = stats.incorrectChars;
+    result.extraChars = stats.extraChars;
+    result.missedChars = stats.missedChars;
+    result.typingTimeMs = timerTyping.elapsed();
     result.rawTimeMs = rawActive ? timerRaw.elapsed() : timerTyping.elapsed();
     return result;
 }
@@ -289,6 +290,7 @@ void TypingScreen::reset()
     countdownTimer->stop();
     isFirstKeyPress = true;
     rawActive = true;
+    finishedAlready = false;
 
     stats = SessionStats();
 

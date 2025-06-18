@@ -2,6 +2,7 @@
 #define STATSDIALOG_H
 
 #include <QDialog>
+#include <QLabel>
 #include <QTableWidget>
 #include <memory>
 #include "text_database.hpp"
@@ -19,6 +20,7 @@ public:
 
 private:
     QTableWidget *table;
+    QLabel *avgStatsLabel;
     void loadStats();
 
     std::shared_ptr<server::TextDatabase> database;

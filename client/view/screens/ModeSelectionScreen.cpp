@@ -23,7 +23,7 @@ ModeSelectionScreen::ModeSelectionScreen(QWidget *parent) : QWidget(parent)
     modesLayout->addWidget(createModeButton("Код", "code"));
     mainLayout->addLayout(modesLayout);
 
-    // Добавляем кнопку "Моя статистика" под кнопками режимов
+    // Кнопка "Моя статистика" под кнопками режимов
     auto *statsBtn = new QPushButton("Моя статистика", this);
     connect(statsBtn, &QPushButton::clicked, this, [this]()
             { emit statsRequested(); });

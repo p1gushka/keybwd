@@ -25,7 +25,6 @@ view::MainWindow::MainWindow(const QString &username, QWidget *parent)
       m_username(username)
 {
     resize(1000, 700);
-    setWindowTitle(QString("Клавиатурный Тренажёр — %1").arg(m_username));
 
     stack = new QStackedWidget(this);
     setCentralWidget(stack);
@@ -45,6 +44,7 @@ view::MainWindow::MainWindow(const QString &username, QWidget *parent)
     connect(resultsScreen, &ResultsScreen::restartClicked, this, &MainWindow::onRestart);
 
     stack->setCurrentWidget(modeSelection);
+    setWindowTitle(QString("Клавиатурный Тренажёр — %1").arg(m_username));
 }
 
 void MainWindow::onModeSelected(const QString &mode, const ModeParams &params)
@@ -117,6 +117,10 @@ void MainWindow::onModeSelected(const QString &mode, const ModeParams &params)
             assert(false);
         }
         text = db->get_random_code(lang);
+    }
+    else if (mode == "custom")
+    {
+        text = params.customText.toStdString();
     }
     else
     {

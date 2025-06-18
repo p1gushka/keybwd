@@ -6,7 +6,8 @@
 
 using namespace view;
 
-ResultsScreen::ResultsScreen(QWidget *parent) : QWidget(parent) {
+ResultsScreen::ResultsScreen(QWidget *parent) : QWidget(parent)
+{
     auto *layout = new QVBoxLayout(this);
     statsLabel = new QLabel(this);
     layout->addWidget(statsLabel);
@@ -19,7 +20,8 @@ ResultsScreen::ResultsScreen(QWidget *parent) : QWidget(parent) {
     connect(buttons, &ButtonsPanel::errorsClicked, this, &ResultsScreen::errorsClicked);
 }
 
-void ResultsScreen::setStats(const SessionStats &stats) {
+void ResultsScreen::setStats(const SessionStats &stats)
+{
     QString statsText;
     statsText += QString("Скорость (WPM): %1\n").arg(stats.getWPM(), 0, 'f', 1);
     statsText += QString("Сырые WPM (RAW): %1\n").arg(stats.getRawWPM(), 0, 'f', 1);
@@ -29,7 +31,5 @@ void ResultsScreen::setStats(const SessionStats &stats) {
     statsText += QString("Пропущенных символов: %1\n").arg(stats.missedChars);
     statsText += QString("Лишних символов: %1\n").arg(stats.extraChars);
 
-    // например, отображение в QLabel
     statsLabel->setText(statsText);
 }
-

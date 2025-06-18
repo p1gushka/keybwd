@@ -43,6 +43,8 @@ private:
     QElapsedTimer timerRaw;
     QTimer *countdownTimer; // Таймер обратного отсчета
 
+    bool finishedAlready = false;
+
     bool rawActive = true;
     int timeLimit = 0; // Ограничение времени в секундах
     int wordCount = 0; // Целевое количество слов
