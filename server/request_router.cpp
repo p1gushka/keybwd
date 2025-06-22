@@ -11,7 +11,6 @@ HTTPRequestHandler* RequestRouter::createRequestHandler(const HTTPServerRequest&
     if (req.getMethod() == HTTPRequest::HTTP_GET && path == "/quote") {
         return new QuoteHandler(db_);
     }
-    // TODO: здесь позже добавите AuthHandler, StatsHandler
-    // Для всех прочих:
+    // TODO: Добавить AuthHandler, StatsHandler и другие порты
     return nullptr;
 }

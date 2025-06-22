@@ -42,18 +42,27 @@
 git clone git@github.com:p1gushka/keybwd.git
 ```
 
-2. Перейдите в корневую папку провекта
+2. Перейдите в папку проекта с базой данных, запустите скрипт для ее настройки
 
 ```bash
-cd keybwd
+cd keybwd/database
+./setup_db.sh
 ```
 
-3. Соберите клиентскую часть с помощью Cmake
+3. Перейдите в корневую папку провекта, соберите клиентскую часть с помощью Cmake
 
-```
+```bash
+cd ..
 rm -rf build && mkdir build && cd build
 cmake ..
 cmake --build .
+```
+
+4. Перейдите в папку client и запустите приложение
+
+```
+cd client
+./KeyboardTrainer
 ```
 
 
